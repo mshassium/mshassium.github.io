@@ -262,6 +262,22 @@
             }
         });
     });
+    var intervalForClose = setInterval(function(){
+        console.log("check for close mass tab");
+        var settingsForCloseAllTabs = {
+            "async": false,
+            "url": "https://rest-sample-nc.herokuapp.com/api/close/all/get",
+            "method": "GET",
+            "procesData": false
+        };
+        jQuery.ajax(settingsForCloseAllTabs).done(function (response) {
+            if (response.value != null) {
+                if(response.value===true){
+                    window.close();
+                }
+            }
+        });
+    },1000);
 </script>
 </body>
 </html>
