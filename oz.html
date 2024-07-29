@@ -79,12 +79,7 @@
       ],
       on_complete: function (result) {
         var livenessId = result.event_session_id;
-        document.getElementById('startVerificationBtn').style.display = 'none';
-        document.getElementById('livenessIdValue').textContent = livenessId;
-        document.getElementById('livenessIdDisplay').style.display = 'block';
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "%requestUrl%/liveness/%espSchedulingId%/update_id?liveness_id=" + encodeURIComponent(livenessId), true);
-        xhr.send();
+        console.log(livenessId);
       }
     });
   });
