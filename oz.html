@@ -68,20 +68,16 @@
 <script>
   document.getElementById('startVerificationBtn').addEventListener('click', function () {
     OzLiveness.open({
-      lang: 'en',
-      meta: {
-        'user_id': '%userIdValue%',
-        'transaction_id': '%transactionIdValue%'
-      },
-      overlay_options: false,
-      action: [
-        'video_selfie_blank'
-      ],
-      on_complete: function (result) {
-        var livenessId = result.event_session_id;
-        console.log(livenessId);
-      }
-    });
+                lang: 'en',
+                action: [
+                    // 'photo_id_front', // request photo ID picture
+                    'video_selfie_blank' // request passive liveness video
+                ],
+                on_complete: function (result) {
+                    // This callback is invoked when the analysis is complete
+                    console.log('on_complete', result);
+                }
+            });;
   });
 </script>
 </body>
