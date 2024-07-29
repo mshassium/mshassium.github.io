@@ -18,13 +18,6 @@
 
 <script>
     window.addEventListener('load', function() {
-        // Проверка загрузки скрипта
-        console.log('Checking if script is loaded:', typeof OzLiveness !== 'undefined');
-        if (typeof OzLiveness === 'undefined') {
-            console.error('OzLiveness script is not loaded.');
-            return;
-        }
-
         document.getElementById('start-liveness-button').addEventListener('click', function () {
             OzLiveness.open({
                 lang: 'en',
