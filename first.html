@@ -6,7 +6,7 @@
 <title>F!RST — v18</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
-:root{
+:root{ --zone-k: 0.78; --zone-c: 20px;
   --page-max: 1280px;
   --bg:#0c1014;
   --panel-b:#232b39;
@@ -46,11 +46,11 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .boardGrid{position:absolute;inset:48px 0 0 0;display:grid;grid-template-columns:1fr minmax(260px,320px);gap:var(--gap);overflow:hidden;padding:0 var(--gap) var(--gap) var(--gap);transform-origin:top left}
 
 .leftCol{display:grid;grid-template-rows:auto auto auto;gap:var(--gap);min-width:0;min-height:0}
-.rightCol{display:grid;grid-template-rows:minmax(86px,auto) minmax(86px,auto) 1fr;gap:var(--gap);min-width:0;min-height:0}
+.rightCol{display:grid;grid-template-rows:auto auto 1fr;gap:var(--gap);min-width:0;min-height:0}
 
 .panel{background:linear-gradient(180deg,#121722,#0e1420);border:1px solid var(--panel-b);border-radius:14px;padding:10px;
-  box-shadow:0 10px 16px rgba(0,0,0,.22), inset 0 1px 0 #ffffff10;overflow:hidden;min-height:0}
-.title{font-weight:800;margin-bottom:6px;font-size:14px;color:#dbe5ff;letter-spacing:.3px;text-shadow:0 1px 0 #000;
+  box-shadow:0 10px 16px rgba(0,0,0,.22), inset 0 1px 0 #ffffff10;overflow:hidden;min-height:0;display:flex;flex-direction:column}
+.title{font-weight:800;margin-bottom:6px;font-size:13px;color:#dbe5ff;letter-spacing:.3px;text-shadow:0 1px 0 #000;
   display:flex;align-items:center;gap:8px;white-space:nowrap}
 .chip{font-size:11px;padding:2px 6px;border:1px solid #2f3a56;border-radius:999px;background:#101828;color:#dbe5ff}
 .note{font-size:12px;color:var(--muted)}
@@ -58,27 +58,23 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 /* Space panels */
 .boardFlat{position:relative;width:100%;border-radius:14px;background:linear-gradient(180deg,#182132,#0d1422);
   border:1px solid #2d3a55;box-shadow:inset 0 0 0 2px #0b101a, 0 10px 24px rgba(0,0,0,.30);overflow:hidden;contain:layout paint size;
-  height: calc(var(--card-w)*0.64 + 18px);} /* narrower */
+  height: calc(var(--card-w));} /* narrower */
 .zone{position:absolute;inset:6px;display:flex;gap:10px;flex-wrap:nowrap;align-items:flex-start;overflow-x:auto;overflow-y:hidden;border-radius:10px;clip-path:inset(0 round 10px)}
 
 /* Cards */
 .card{width:var(--card-w);height:calc(var(--card-w)*0.72);border-radius:12px;border:1px solid #2f3850;
   background:linear-gradient(180deg,#1d2536,#141b2a);display:flex;align-items:center;justify-content:center;position:relative;
   box-shadow:0 8px 14px rgba(0,0,0,.35), inset 0 0 0 2px #c8d2ee22;transition:transform .12s ease-out, box-shadow .12s ease-out}
-.card.hand{width:var(--card-w-hand);height:calc(var(--card-w-hand)*0.72)}
+.card.hand{width:var(--card-w-hand);height:var(--card-w-hand)}
 .card.clickable{cursor:pointer}
 .card.clickable:hover{box-shadow:0 10px 16px rgba(0,0,0,.4), 0 0 0 2px var(--outline) inset;transform:translateY(-2px)}
 .L{font-size:clamp(32px,5.8vw,52px);font-weight:1000;letter-spacing:2px;line-height:1;text-shadow:0 1px 0 #000}
-.card.hand .L{font-size:calc(0.8 * (clamp(32px,5.8vw,52px)));}
+.card.hand .L{font-size:calc(0.576 * (clamp(32px,5.8vw,52px)));}
 .L.F{color:#9cc8ff}.L.I{color:#a9ffcf}.L.R{color:#ffd195}.L.S{color:#ff9aa4}.L.T{color:#c6b3ff}
 
-/* Forbid FX inside card (clipped) */
-.forbidFx::after{
-  content:""; position:absolute; inset:6px; border-radius:10px;
-  border:2px solid var(--forbid); box-shadow:0 0 10px #ffd36b80 inset;
-  pointer-events:none;
-}
-.badge{position:absolute;top:6px;right:6px;background:#0f1422;border:1px solid #2a3244;color:#1eeb8f;padding:1px 6px;font-size:12px;border-radius:10px;z-index:2;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+/* Forbid FX as card border */
+.forbidFx{ border-color: var(--forbid) !important; box-shadow: 0 0 0 2px #ffd36b55 inset, 0 0 18px #ffd36b33; }
+.badge{position:absolute;top:4px;right:4px;background:#0f1422;border:1px solid #2a3244;color:#1eeb8f;padding:0 4px;font-size:10px;border-radius:9px;z-index:2;box-shadow:0 3px 8px rgba(0,0,0,.35)}
 
 /* Turn highlight */
 .activeTurn{outline:2px solid var(--ring);box-shadow:0 0 0 6px #3aa1ff14 inset, 0 0 0 2px var(--ring) inset}
@@ -93,10 +89,10 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 
 /* Hand */
 .handPanel{padding:10px}
-.handRow{display:flex;gap:8px;flex-wrap:nowrap;align-items:flex-start;padding:4px;overflow-x:auto}
+.handRow{display:flex;gap:8px;flex-wrap:nowrap;align-items:center;padding:4px;overflow:hidden;scrollbar-width:none}
 
 /* Log */
-.logPanel{min-height:0;display:flex;flex-direction:column;height:210px} /* smaller so it 'ужимается' */
+.logPanel{min-height:0;display:flex;flex-direction:column;height:auto}
 .logHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .log{flex:1 1 auto;min-height:0;overflow:auto;background:#0e1524;border:1px solid #25314a;border-radius:10px;padding:10px;color:#c6d0ec;font-size:13px;line-height:1.35}
 .logPanel.collapsed{height:42px}
@@ -105,14 +101,14 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 /* Menu, modals, dice */
 .menu{position:fixed;inset:0;z-index:280;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(1200px 600px at 50% 10%, #1a2440cc, transparent), linear-gradient(180deg,#0e1422f2,#0a0f18f2)}
 .menu .cardmenu{background:linear-gradient(180deg,#0f1728,#0b1220);border:1px solid #2d3754;border-radius:20px;padding:22px;width:min(520px,92vw);box-shadow:0 28px 56px rgba(0,0,0,.55);display:flex;flex-direction:column;align-items:center}
-.menu .muted{color:#acb6cf;font-size:14px;margin-bottom:12px}
+.menu .muted{color:#acb6cf;font-size:13px;margin-bottom:12px}
 .menu .items{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
 .menu .btn.big{font-size:16px;font-weight:800;padding:14px 18px;width:80%;max-width:360px}
 
 .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;z-index:260;backdrop-filter:blur(2px)}
 .modal .box{background:#10182a;border:1px solid #2a3450;border-radius:14px;max-width:720px;width:100%;box-shadow:0 10px 24px rgba(0,0,0,.5)}
 .modal .head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #253254}
-.modal .body{padding:12px}
+.modal .body{padding:12px;text-align:center}
 .choices{display:flex;gap:8px;flex-wrap:wrap}
 .choice{padding:8px 12px;border:1px solid #2a3142;border-radius:10px;background:#161b28;color:#dbe5ff;cursor:pointer}
 .choice:hover{outline:2px solid var(--outline)}
@@ -128,35 +124,47 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .face:nth-child(6){transform:rotateX(-90deg) translateZ(36px)}
 .diceTxt{color:#dbe5ff;font-weight:800;text-shadow:0 1px 0 #000}
 
+.handRow::-webkit-scrollbar{display:none}
 ::-webkit-scrollbar{height:8px;width:8px}
 ::-webkit-scrollbar-track{background:#0b1019}
 ::-webkit-scrollbar-thumb{background:#22334a;border-radius:8px}
 
 /* ===== Mobile-first ===== */
 @media (max-width: 900px){
-  :root{ --card-w: clamp(34px, 8.8vw, 62px); --gap:8px; --page-max: 980px; }
+  :root{ --zone-k: 1.00; --zone-c: 14px; }
+  :root{ --zone-k: 0.78; --zone-c: 20px; --card-w: clamp(34px, 8.8vw, 62px); --gap:8px; --page-max: 980px; }
   h1{font-size:15px}
   .pill{padding:4px 6px;font-size:11px}
   .title{font-size:12px}
   .L{font-size:clamp(16px, 4.9vw, 26px)}
   .boardGrid{inset:10px 0 0 0; gap:8px;}
-  .boardFlat{height: calc(var(--card-w)*0.92 + 14px);} /* tighter to avoid overlap */
+  .boardFlat{height: calc(var(--card-w))} /* mobile fit */
   .zone{inset:8px}
-  .logPanel{height:140px}
+  .logPanel{height:auto}
   .controls .btn{display:none}
   #hamburger{display:block}
 }
 @media (max-width: 600px){
-  :root{ --card-w: clamp(30px, 8.2vw, 56px); --gap:6px; }
-  h1{font-size:14px}
+  :root{ --zone-k: 1.04; --zone-c: 12px; }
+  :root{ --zone-k: 0.78; --zone-c: 20px; --card-w: clamp(30px, 8.2vw, 56px); --gap:6px; }
+  h1{font-size:13px}
   .pill{padding:3px 5px;font-size:10px}
   .title{font-size:12px}
   .L{font-size:clamp(15px, 4.4vw, 22px)}
   .boardGrid{inset:8px 0 0 0; gap:6px;}
-  .boardFlat{height: calc(var(--card-w)*0.96 + 12px);}
+  .boardFlat{height: calc(var(--card-w))}
   .zone{inset:7px}
-  .logPanel{height:130px}
+  .logPanel{height:auto}
 }
+
+@media (min-width: 700px) and (max-width: 1180px){
+  :root{ --zone-k: 0.86; --zone-c: 18px; }
+  :root{ --zone-k: 0.78; --zone-c: 20px; --card-w: clamp(88px, 8.6vw, 140px); }
+  .L{ font-size: clamp(30px, 5.4vw, 58px); }
+  .boardFlat{ height: calc(var(--card-w)); }
+  .handRow{ gap: 10px; }
+}
+
 </style>
 </head>
 <body>
@@ -199,25 +207,25 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
             <div class="boardFlat"><div id="youSpace" class="zone"></div></div>
           </div>
           <div class="panel handPanel">
-            <div class="title" id="yourHandTitle">Your hand <span class="note" id="handNote">(tap a card to play; turn ends automatically)</span></div>
+            <div class="title" id="yourHandTitle">Your hand <span class="note" id="handNote" style="display:none">(tap a card to play; turn ends automatically)</span></div>
             <div id="youHand" class="handRow"></div>
           </div>
         </div>
         <div class="rightCol">
-          <div class="panel">
+          <div class="panel" id="panelAiDiscard">
             <div class="title" id="aiDiscardTitle">DISCARD — AI</div>
-            <div id="aiDiscard" class="stackPiles"></div>
+            <div id="aiDiscard" class="stackPiles" style="flex:1 1 auto"></div>
           </div>
-          <div class="panel">
+          <div class="panel" id="panelYouDiscard">
             <div class="title" id="youDiscardTitle">DISCARD — You</div>
-            <div id="youDiscard" class="stackPiles"></div>
+            <div id="youDiscard" class="stackPiles" style="flex:1 1 auto"></div>
           </div>
-          <div class="panel logPanel" id="logPanel">
+          <div class="panel logPanel" id="logPanel" style="flex:1 1 auto">
             <div class="logHeader">
               <div class="title" id="logTitle" style="margin:0">Game log</div>
               <button id="toggleLog" class="btn" style="padding:4px 10px">Hide</button>
             </div>
-            <div id="log" class="log"></div>
+            <div id="log" class="log" style="flex:1 1 auto"></div>
           </div>
         </div>
       </div>
@@ -265,13 +273,13 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 <div class="modal" id="helpModal">
   <div class="box">
     <div class="head"><div style="font-weight:800" id="rulesTitle">F!RST — rules & cards</div><button class="btn" id="closeHelp">Close</button></div>
-    <div class="body"><div class="note" style="font-size:14px;color:#dfe7ff" id="rulesBody"></div></div>
+    <div class="body"><div class="note" style="font-size:13px;color:#dfe7ff" id="rulesBody"></div></div>
   </div>
 </div>
 
 <div class="modal" id="winModal">
   <div class="box">
-    <div class="head"><div style="font-weight:800" id="gameOverKey">Game Over</div><button class="btn" id="winClose">OK</button></div>
+    <div class="head" style="justify-content:center;gap:10px"><div style="font-weight:800" id="gameOverKey">Game Over</div></div>
     <div class="body">
       <h3 id="winTitle">Victory!</h3>
       <div id="winMsg" class="msg">You completed a combo.</div>
@@ -394,6 +402,9 @@ function setHUD(){
 function render(){
   setHUD();
   updateTurnHighlight();
+  computeAdaptiveCardWidth();
+
+
   const aiS=document.getElementById('aiSpace'); aiS.innerHTML='';
   G.ai.space.forEach(c=> aiS.appendChild(cardEl(c)));
   const youS=document.getElementById('youSpace'); youS.innerHTML='';
@@ -510,7 +521,7 @@ function endTurn(){ if(G.over) return; G.turn=(G.turn==='you')?'ai':'you'; rende
 
 function defeat(side){
   if(G.over) return; G.over=true;
-  document.getElementById('winTitle').textContent = side==='you'? "Defeat" : "Victory!";
+  document.getElementById('winTitle').textContent = side==='you'? "😞 Defeat" : "🎉 Victory!";
   document.getElementById('winMsg').textContent = side==='you'? 'Your deck was empty on a required draw.' : 'AI had no cards to draw.';
   document.getElementById('winModal').style.display='flex';
 }
@@ -701,16 +712,60 @@ function animateFromDiscardTo(side,dest,letter){
 }
 
 /* ===== Layout helpers ===== */
+
+function computeAdaptiveCardWidth(){
+  const root = document.documentElement;
+  const handRow = document.getElementById('youHand');
+  const headerH = document.querySelector('header').getBoundingClientRect().height;
+  const grid = document.getElementById('boardGrid');
+  // Available height for left column panels
+  const vh = window.innerHeight;
+  const leftCol = document.querySelector('.leftCol');
+  const gaps = parseFloat(getComputedStyle(leftCol).gap || 8) * 2; // approx
+  const panels = 3;
+  const availForPanels = Math.max(200, vh - headerH - 24);
+  const perPanel = (availForPanels - gaps) / panels;
+
+  // From height: boardFlat height = cardW * zoneK + zoneC + inner paddings (~22)
+  const cs = getComputedStyle(root);
+  const zoneK = parseFloat(cs.getPropertyValue('--zone-k')) || 1.0;
+  const zoneCpx = parseFloat((cs.getPropertyValue('--zone-c')||'0').replace('px','')) || 16;
+  const innerPad = 22; // title + insets approximation
+  const maxFromHeight = Math.max(32, (perPanel - innerPad - zoneCpx) / Math.max(0.6, zoneK));
+
+  // From width: hand should fit 7 cards without scroll
+  // precise inner width = clientWidth - horizontal paddings
+  const csRow = getComputedStyle(handRow);
+  const padL = parseFloat(csRow.paddingLeft)||0;
+  const padR = parseFloat(csRow.paddingRight)||0;
+  const handW = (handRow.clientWidth - padL - padR) || (window.innerWidth * 0.9);
+  const handGaps = 8 * 6; // 6 gaps by CSS
+  const SAFETY = 6; // compensate borders/rounding to avoid overflow
+  const fromHand = Math.max(26, Math.floor((handW - handGaps - SAFETY)/7));
+
+  // Base card variable (desktop cap keeps aesthetic)
+  const base = Math.min(fromHand, maxFromHeight, 160);
+  root.style.setProperty('--card-w', Math.floor(base) + 'px');
+  // Hand cards may be slightly larger to fill row
+  root.style.setProperty('--card-w-hand', Math.floor(fromHand) + 'px');
+}
+
 function fitHandToSeven(){
   const row=document.getElementById('youHand');
-  const w=row.clientWidth; const gaps=8*6;
-  const target=Math.floor((w-gaps)/7);
+  const csRow = getComputedStyle(row);
+  const w=row.clientWidth - (parseFloat(csRow.paddingLeft)||0) - (parseFloat(csRow.paddingRight)||0);
+  const gaps=8*6; let target=Math.floor((w-gaps-6)/7);
+  if(window.innerWidth>=700 && window.innerWidth<=1180){ target = Math.floor(target*1.08); }
   const max=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w').match(/\d+/));
-  const cardW=Math.max(32, Math.min(target, max||120));
+  const cardW=Math.max(40, Math.min(target, Math.floor((max||120)*1.12)));
   document.documentElement.style.setProperty('--card-w-hand', cardW+'px');
 }
 
 let scaleApplied=1;
+
+
+
+
 function fitMobileScale(){
   const grid=document.getElementById('boardGrid');
   if(window.innerWidth>=1000){ grid.style.transform='scale(1)'; scaleApplied=1; return; }
@@ -769,17 +824,20 @@ document.getElementById('toggleLog').addEventListener('click', ()=>{
   const p=document.getElementById('logPanel'); p.classList.toggle('collapsed'); applyTexts();
 });
 /* Burger */
-const burger=document.getElementById('hamburger'), qMenu=document.getElementById('quickMenu');
-burger.addEventListener('click', (e)=>{ e.stopPropagation(); qMenu.style.display = (qMenu.style.display==='flex')?'none':'flex'; });
-document.addEventListener('click', (e)=>{ if(qMenu.style.display==='flex') qMenu.style.display='none'; });
-document.getElementById('qmLang').addEventListener('click', (e)=>{ e.stopPropagation(); LANG=(LANG==='en')?'ru':'en'; applyTexts(); render(); });
-document.getElementById('qmMenu').addEventListener('click', (e)=>{ e.stopPropagation(); qMenu.style.display='none'; document.getElementById('menu').style.display='flex'; });
-document.getElementById('qmHelp').addEventListener('click', (e)=>{ e.stopPropagation(); qMenu.style.display='none'; document.getElementById('helpModal').style.display='flex'; });
-document.getElementById('qmNew').addEventListener('click', (e)=>{ e.stopPropagation(); qMenu.style.display='none'; newGame(); });
+const burger=document.getElementById('hamburger');
+const qMenu=document.getElementById('quickMenu');
+if(burger && qMenu){
+  burger.addEventListener('click', (e)=>{ e.stopPropagation(); qMenu.style.display = (qMenu.style.display==='flex')?'none':'flex'; });
+  document.addEventListener('click', (e)=>{ if(qMenu.style.display==='flex') qMenu.style.display='none'; });
+}
+const qmLang=document.getElementById('qmLang'); if(qmLang){ qmLang.addEventListener('click', (e)=>{ e.stopPropagation(); LANG=(LANG==='en')?'ru':'en'; applyTexts(); render(); }); }
+const qmMenu=document.getElementById('qmMenu'); if(qmMenu){ qmMenu.addEventListener('click', (e)=>{ e.stopPropagation(); if(qMenu) qMenu.style.display='none'; document.getElementById('menu').style.display='flex'; }); }
+const qmHelp=document.getElementById('qmHelp'); if(qmHelp){ qmHelp.addEventListener('click', (e)=>{ e.stopPropagation(); if(qMenu) qMenu.style.display='none'; document.getElementById('helpModal').style.display='flex'; }); }
+const qmNew=document.getElementById('qmNew'); if(qmNew){ qmNew.addEventListener('click', (e)=>{ e.stopPropagation(); if(qMenu) qMenu.style.display='none'; newGame(); }); }
 
 applyTexts();
-window.addEventListener('resize', ()=>{ fitHandToSeven(); fitMobileScale(); });
-window.addEventListener('orientationchange', ()=>{ setTimeout(()=>{ fitHandToSeven(); fitMobileScale(); }, 300); });
+let __rT; window.addEventListener('resize', ()=>{ clearTimeout(__rT); __rT=setTimeout(()=>{ computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale(); render(); }, 0); });
+window.addEventListener('orientationchange', ()=>{ setTimeout(()=>{ computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale(); render(); }, 150); });
 </script>
 </body>
 </html>
