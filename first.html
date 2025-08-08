@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<title>F!RST — Flat Ghibli (v12)</title>
+<title>F!RST — Flat Ghibli (v13)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
 :root{
@@ -14,9 +14,9 @@
   --accent:#8fb1ff;
   --outline:#4a5a84;
   --ring:#3aa1ff80;
-  --win:#44d18c; --lose:#e05b6f;
-  --forbid:#ffd36b; --forbid-strong:#ffb400; --forbid-trigger:#ff5e6e;
-  --card-w:clamp(86px, 13vw, 128px);
+  --forbid:#ffd36b;
+  --card-w:clamp(86px, 13vw, 128px); /* default */
+  --card-w-hand: var(--card-w);      /* computed for hand to fit 7 */
   --gap:12px;
 }
 *{box-sizing:border-box}
@@ -35,7 +35,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .icon-btn{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900}
 
 .boardShell{position:relative;flex:1;overflow:hidden}
-.boardGrid{position:absolute;inset:56px 0 0 0;display:grid;grid-template-columns:1fr minmax(260px,320px);gap:var(--gap);overflow:hidden;padding:0 var(--gap) var(--gap) var(--gap)}
+.boardGrid{position:absolute;inset:56px 0 0 0;display:grid;grid-template-columns:1fr minmax(260px,320px);gap:var(--gap);overflow:hidden;padding:0 var(--gap) var(--gap) var(--gap);transform-origin:top left}
 
 .leftCol{display:grid;grid-template-rows:1fr 1fr auto;gap:var(--gap);min-width:0;min-height:0}
 .rightCol{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:var(--gap);min-width:0;min-height:0}
@@ -50,25 +50,23 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .boardFlat{position:relative;width:100%;border-radius:14px;background:linear-gradient(180deg,#182132,#0d1422);
   border:1px solid #2d3a55;box-shadow:inset 0 0 0 2px #0b101a, 0 10px 24px rgba(0,0,0,.30);overflow:hidden;contain:layout paint size;
   min-height:140px;height:auto}
-.zone{position:absolute;inset:12px;display:flex;gap:10px;flex-wrap:wrap;align-content:flex-start}
-
-/* Forbid FX on F only + badge with letter (your side only) */
-.forbidFx{outline:2px solid var(--forbid);box-shadow:0 0 0 10px #ffd36b20 inset, 0 0 18px #ffd36b66;position:relative;animation:forbidPulse 1.2s ease-in-out infinite}
-@keyframes forbidPulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
-.badge{position:absolute;top:-8px;right:-8px;background:#0f1422;border:1px solid #2a3244;color:#1eeb8f;padding:2px 6px;font-size:12px;border-radius:10px;z-index:2;box-shadow:0 4px 10px rgba(0,0,0,.35)}
-
-.triggerFlash{position:absolute;inset:0;background:radial-gradient(ellipse at center,#ff5e6e55,transparent 55%);pointer-events:none;animation:flash .7s ease forwards;border-radius:12px}
-@keyframes flash{from{opacity:1}to{opacity:0}}
+.zone{position:absolute;inset:12px;display:flex;gap:10px;flex-wrap:nowrap;align-items:flex-start;overflow-x:auto;overflow-y:hidden}
 
 .card{width:var(--card-w);height:calc(var(--card-w)*0.82);border-radius:12px;border:1px solid #2f3850;
   background:linear-gradient(180deg,#1d2536,#141b2a);display:flex;align-items:center;justify-content:center;position:relative;
-  box-shadow:0 8px 14px rgba(0,0,0,.35), inset 0 0 0 2px #c8d2ee22;transition:transform .12s ease-out, box-shadow .12s ease-out, filter .12s ease-out;}
+  box-shadow:0 8px 14px rgba(0,0,0,.35), inset 0 0 0 2px #c8d2ee22;transition:transform .12s ease-out, box-shadow .12s ease-out}
+.card.hand{width:var(--card-w-hand);height:calc(var(--card-w-hand)*0.82)}
 .card.clickable{cursor:pointer}
 .card.clickable:hover{box-shadow:0 10px 16px rgba(0,0,0,.4), 0 0 0 2px var(--outline) inset;transform:translateY(-2px)}
 .L{font-size:clamp(36px,6.6vw,58px);font-weight:1000;letter-spacing:2px;line-height:1;text-shadow:0 1px 0 #000}
 .L.F{color:#9cc8ff}.L.I{color:#a9ffcf}.L.R{color:#ffd195}.L.S{color:#ff9aa4}.L.T{color:#c6b3ff}
 
-/* Turn highlighting */
+/* Forbid FX only on F */
+.forbidFx{outline:2px solid var(--forbid);box-shadow:0 0 0 10px #ffd36b20 inset, 0 0 18px #ffd36b66;position:relative;animation:forbidPulse 1.2s ease-in-out infinite}
+@keyframes forbidPulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+.badge{position:absolute;top:-8px;right:-8px;background:#0f1422;border:1px solid #2a3244;color:#1eeb8f;padding:2px 6px;font-size:12px;border-radius:10px;z-index:2;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+
+/* Turn highlight */
 .activeTurn{outline:2px solid var(--ring);box-shadow:0 0 0 6px #3aa1ff14 inset, 0 0 0 2px var(--ring) inset}
 
 /* Discard piles */
@@ -81,23 +79,22 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 
 /* Hand */
 .handPanel{padding:10px}
-.handRow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;padding:4px}
+.handRow{display:flex;gap:8px;flex-wrap:nowrap;align-items:flex-start;padding:4px;overflow-x:auto}
 
-/* Log panel constrained + collapsible */
+/* Log */
 .logPanel{min-height:0;display:flex;flex-direction:column;height:min(40vh,340px)}
 .logHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .log{flex:1 1 auto;min-height:0;overflow:auto;background:#0e1524;border:1px solid #25314a;border-radius:10px;padding:10px;color:#c6d0ec;font-size:13px;line-height:1.35}
 .logPanel.collapsed{height:42px}
 .logPanel.collapsed .log{display:none}
 
-/* Menu */
+/* Menu, modals, dice — same as v12 */
 .menu{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(1200px 600px at 50% 10%, #1a2440cc, transparent), linear-gradient(180deg,#0e1422f2,#0a0f18f2)}
 .menu .cardmenu{background:linear-gradient(180deg,#0f1728,#0b1220);border:1px solid #2d3754;border-radius:20px;padding:22px;width:min(520px,92vw);box-shadow:0 28px 56px rgba(0,0,0,.55);display:flex;flex-direction:column;align-items:center}
 .menu .muted{color:#acb6cf;font-size:14px;margin-bottom:12px}
 .menu .items{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
 .menu .btn.big{font-size:16px;font-weight:800;padding:14px 18px;width:80%;max-width:360px}
 
-/* Choice & Dice & Modals */
 .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;z-index:90;backdrop-filter:blur(2px)}
 .modal .box{background:#10182a;border:1px solid #2a3450;border-radius:14px;max-width:720px;width:100%;box-shadow:0 10px 24px rgba(0,0,0,.5)}
 .modal .head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #253254}
@@ -121,18 +118,18 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 ::-webkit-scrollbar-track{background:#0b1019}
 ::-webkit-scrollbar-thumb{background:#22334a;border-radius:8px}
 
-/* Mobile tweaks: keep layout but shrink everything */
+/* Mobile reductions but keep layout */
 @media (max-width: 900px){
   :root{ --card-w: clamp(56px, 12vw, 96px); --gap:10px; --page-max: 1000px; }
   .pill{padding:4px 8px;font-size:11px}
   .title{font-size:13px}
-  .logPanel{height:min(32vh,260px)}
+  .logPanel{height:min(28vh,240px)}
 }
 @media (max-width: 600px){
   :root{ --card-w: clamp(48px, 12.5vw, 84px); --gap:8px; }
   .title{font-size:12px}
   .L{font-size:clamp(28px, 8.5vw, 44px)}
-  .logPanel{height:min(30vh,220px)}
+  .logPanel{height:min(26vh,200px)}
 }
 </style>
 </head>
@@ -148,6 +145,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
         <span class="pill"><span id="aiHandKey">AI hand</span>: <b id="aiHandCount">0</b> (<span id="hiddenKey">hidden</span>)</span>
         <span class="pill" id="forbidAIPill" style="display:none"></span>
         <span class="pill" id="forbidYouPill" style="display:none"></span>
+        <span class="pill" id="timerPill">00:00</span>
       </div>
       <div class="bar">
         <button class="btn" id="langBtn" title="Language">🇬🇧 EN</button>
@@ -160,7 +158,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 
   <div class="boardShell">
     <div class="center" style="height:100%">
-      <div class="boardGrid">
+      <div id="boardGrid" class="boardGrid">
         <div class="leftCol">
           <div id="panelAiSpace" class="panel">
             <div class="title"><span id="aiSpaceTitle">SPACE — AI</span> <span id="aiForbidChip" class="chip" style="display:none"></span></div>
@@ -197,7 +195,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
   </div>
 </div>
 
-<!-- Menu -->
+<!-- Menus and modals (same as v12) -->
 <div id="menu" class="menu" style="display:flex">
   <div class="cardmenu">
     <div class="muted" id="welcomeTxt">Welcome to F!RST</div>
@@ -208,7 +206,6 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
   </div>
 </div>
 
-<!-- Dice -->
 <div id="diceOverlay" class="diceOverlay">
   <div class="diceArea">
     <div>
@@ -228,7 +225,6 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
   </div>
 </div>
 
-<!-- Choice modal -->
 <div class="modal" id="choiceModal">
   <div class="box">
     <div class="head"><div id="choiceTitle">Choose</div><div></div></div>
@@ -236,7 +232,6 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
   </div>
 </div>
 
-<!-- Help/Rules modal -->
 <div class="modal" id="helpModal">
   <div class="box">
     <div class="head"><div style="font-weight:800" id="rulesTitle">F!RST — rules & cards</div><button class="btn" id="closeHelp">Close</button></div>
@@ -244,7 +239,6 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
   </div>
 </div>
 
-<!-- Victory modal -->
 <div class="modal" id="winModal">
   <div class="box">
     <div class="head"><div style="font-weight:800" id="gameOverKey">Game Over</div><button class="btn" id="winClose">OK</button></div>
@@ -260,22 +254,14 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 </div>
 
 <script>
-/* ================= i18n ================= */
+/* ===== i18n (same as v12) ===== */
 const I18N={
   en:{title:"F!RST — flat ghibli",turnKey:"Turn",diceKey:"Dice",yourHandKey:"Your hand",aiHandKey:"AI hand",hidden:"hidden",
       btnMenu:"Menu",btnNew:"New Game",welcome:"Welcome to F!RST",menuNew:"New Game",menuRules:"Rules",
       you:"You",ai:"AI",spaceAI:"SPACE — AI",spaceYou:"SPACE — You",discardAI:"DISCARD — AI",discardYou:"DISCARD — You",
       logTitle:"Game log",handTitle:"Your hand",handNote:"(tap a card to play; turn ends automatically)",
       rulesTitle:"F!RST — rules & cards",gameOver:"Game Over",
-      rulesBody:`<b>Objective:</b> first to assemble <b>F I R S T</b>, or 5 copies of the same letter, in your SPACE.<br/><br/>
-<b>Deck:</b> 50 cards per player (10×F, 10×I, 10×R, 10×S, 10×T). Start hand: 5 cards. Dice decides who goes first.<br/><br/>
-<b>Turn:</b> Draw 1 (except on the very first turn of the first player) → play exactly 1 card → resolve effect → turn auto-ends. Hand limit: 7 (excess to discard). If you must draw and your deck is empty, you lose.<br/><br/>
-<b>Cards:</b><br/>
-• <b>F</b> (<i>Forbid</i>): set a one-shot trap on a letter type; opponent’s next card of that type is sent to their DISCARD instead of entering SPACE.<br/>
-• <b>I</b> (<i>Increase</i>): draw 1 card.<br/>
-• <b>R</b> (<i>Recover</i>): return 1 card from your DISCARD to your hand.<br/>
-• <b>S</b> (<i>Steal</i>): move 1 card from opponent’s SPACE to their DISCARD.<br/>
-• <b>T</b> (<i>Trap</i>): on opponent’s next turn, after draw, they must discard 1 card (stacks).<br/>`,
+      rulesBody:`Objective: assemble F I R S T or 5 of a kind. Cards: F=Forbid, I=Increase (draw 1), R=Recover (from DISCARD), S=Steal (from SPACE to DISCARD), T=Trap (opponent discards next turn).`,
       forbidChip:"Forbid active",forbidYouPill:(l)=>`Your forbid: ${l}`,forbidAIPill:"AI forbid: active",
       choose:"Choose",pickForbid:"Choose a letter to forbid",pickRecover:"Recover: choose a letter from your DISCARD",
       pickSteal:"Steal: choose a card from opponent SPACE",pickTrapDiscard:"Trap (T): choose a card to discard",
@@ -296,15 +282,7 @@ const I18N={
       you:"Ты",ai:"ИИ",spaceAI:"SPACE — ИИ",spaceYou:"SPACE — Ты",discardAI:"DISCARD — ИИ",discardYou:"DISCARD — Ты",
       logTitle:"Журнал боя",handTitle:"Твоя рука",handNote:"(нажми на карту, чтобы сыграть; ход завершится сам)",
       rulesTitle:"F!RST — правила и карты",gameOver:"Конец игры",
-      rulesBody:`<b>Цель:</b> первым собрать <b>F I R S T</b> или 5 одинаковых букв в своей SPACE.<br/><br/>
-<b>Колоды:</b> по 50 карт (10×F, 10×I, 10×R, 10×S, 10×T). В начале по 5 карт. Первый ход решает кубик.<br/><br/>
-<b>Ход:</b> Взять 1 (кроме самого первого хода первого игрока) → сыграть ровно 1 карту → применить эффект → ход заканчивается автоматически. Лимит руки: 7 (лишнее — в DISCARD). Если нужно взять, а колода пуста — поражение.<br/><br/>
-<b>Карты:</b><br/>
-• <b>F</b> (<i>Forbid</i>): однократный блок буквы; следующая карта противника этой буквы пойдёт в DISCARD вместо SPACE.<br/>
-• <b>I</b> (<i>Increase</i>): возьми 1 карту.<br/>
-• <b>R</b> (<i>Recover</i>): верни 1 карту из DISCARD в руку.<br/>
-• <b>S</b> (<i>Steal</i>): убери 1 карту из SPACE противника в его DISCARD.<br/>
-• <b>T</b> (<i>Trap</i>): в следующий ход противник после взятия обязан сбросить 1 карту (стекается).<br/>`,
+      rulesBody:`Цель: собрать F I R S T или 5 одинаковых. F=Forbid, I=Increase (+1 карта), R=Recover (из DISCARD), S=Steal (со SPACE в DISCARD), T=Trap (противник сбросит в следующий ход).`,
       forbidChip:"Блок активен",forbidYouPill:(l)=>`Твой блок: ${l}`,forbidAIPill:"Блок ИИ: активен",
       choose:"Выбор",pickForbid:"Выбери букву для блока",pickRecover:"Recover: выбери букву из DISCARD",
       pickSteal:"Укажи карту на столе противника",pickTrapDiscard:"Ловушка (T): выбери карту для сброса",
@@ -353,21 +331,18 @@ function applyTexts(){
   document.getElementById('langBtn').textContent= LANG==='en'?'🇬🇧 EN':'🇷🇺 RU';
 }
 
-/* === card helper === */
+/* Card helper */
 function cardEl(letter, opts={}){
   const d=document.createElement('div');
-  d.className='card'+(opts.clickable?' clickable':'');
-  const span=document.createElement('div');
-  span.className='L '+letter;
-  span.textContent=letter;
-  d.appendChild(span);
+  d.className='card'+(opts.hand?' hand':'')+(opts.clickable?' clickable':'');
+  const span=document.createElement('div'); span.className='L '+letter; span.textContent=letter; d.appendChild(span);
   if(opts.clickable && opts.onClick) d.addEventListener('click', opts.onClick);
   return d;
 }
 
-/* ================= Game ================= */
+/* ===== Game state and logic (same as v12) ===== */
 const TYPES=['F','I','R','S','T'];
-let G=null;
+let G=null, timerId=null, elapsed=0;
 function sideState(){ return { deck: buildDeck(), hand: [], space: [], discard: [] }; }
 function buildDeck(){ const d=[]; for(let i=0;i<10;i++) for(const t of TYPES) d.push(t); return d; }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
@@ -380,6 +355,7 @@ function newGame(){
       over:false };
   shuffle(G.you.deck); shuffle(G.ai.deck);
   draw('you',5); draw('ai',5);
+  startTimer(true);
   openDiceAndDecideFirstPlayer();
   render();
 }
@@ -395,13 +371,7 @@ function setHUD(){
   aP.style.display = a? 'inline-block' : 'none';
   if(y) yP.textContent = tt('forbidYouPill', y);
   if(a) aP.textContent = tt('forbidAIPill');
-}
-
-function updateTurnHighlight(){
-  const youP=document.getElementById('panelYouSpace');
-  const aiP =document.getElementById('panelAiSpace');
-  youP.classList.toggle('activeTurn', G.turn==='you' && !G.over);
-  aiP.classList.toggle('activeTurn',  G.turn==='ai'  && !G.over);
+  document.getElementById('timerPill').textContent = formatElapsed(elapsed);
 }
 
 function render(){
@@ -412,10 +382,12 @@ function render(){
   const youS=document.getElementById('youSpace'); youS.innerHTML='';
   G.you.space.forEach(c=> youS.appendChild(cardEl(c)));
   const hand=document.getElementById('youHand'); hand.innerHTML='';
-  G.you.hand.forEach((c,i)=> hand.appendChild(cardEl(c,{clickable:G.turn==='you' && !G.over, onClick:()=>playFromHand(i)})));
+  G.you.hand.forEach((c,i)=> hand.appendChild(cardEl(c,{hand:true, clickable:G.turn==='you' && !G.over, onClick:()=>playFromHand(i)})));
   renderDiscard('aiDiscard', G.ai.discard);
   renderDiscard('youDiscard', G.you.discard);
   updateForbidFX();
+  fitHandToSeven();
+  fitMobileScale();
 }
 
 function updateForbidFX(){
@@ -449,7 +421,15 @@ function letterColor(l){ return l==='F'?'#9cc8ff':l==='I'?'#a9ffcf':l==='R'?'#ff
 
 function logAdd(s){ const el=document.getElementById('log'); const div=document.createElement('div'); div.textContent=s; el.appendChild(div); el.scrollTop=el.scrollHeight; }
 
-/* Flow */
+/* ====== Timer ====== */
+function startTimer(reset){
+  if(reset){ elapsed=0; }
+  if(timerId) clearInterval(timerId);
+  timerId=setInterval(()=>{ elapsed++; const p=document.getElementById('timerPill'); if(p) p.textContent=formatElapsed(elapsed); },1000);
+}
+function formatElapsed(sec){ const m = Math.floor(sec/60).toString().padStart(2,'0'); const s=(sec%60).toString().padStart(2,'0'); return `${m}:${s}`; }
+
+/* ===== Flow (same as v12) ===== */
 function draw(side,n){
   const S=(side==='you')?G.you:G.ai;
   for(let i=0;i<n;i++){
@@ -466,6 +446,13 @@ function enforceHandLimit(side){
     logAdd(side==='you'?tt('overflowYou', overflow):tt('overflowAI', overflow));
   }
   render();
+}
+
+function updateTurnHighlight(){
+  const youP=document.getElementById('panelYouSpace');
+  const aiP =document.getElementById('panelAiSpace');
+  youP.classList.toggle('activeTurn', G.turn==='you' && !G.over);
+  aiP.classList.toggle('activeTurn',  G.turn==='ai'  && !G.over);
 }
 
 function startTurn(){
@@ -649,7 +636,7 @@ function animateDice(id,val){
 }
 function faceRotation(v){ switch(v){ case 1:return{x:0,y:0}; case 2:return{x:0,y:-90}; case 3:return{x:0,y:180}; case 4:return{x:0,y:90}; case 5:return{x:-90,y:0}; case 6:return{x:90,y:0}; } return{x:0,y:0}; }
 
-/* Anim helpers */
+/* ===== Anim & helpers ===== */
 function pickHandCardEl(index){ const hand=document.getElementById('youHand'); return hand.children[index]; }
 function animateFly(fromEl,toContainer){
   const rectTo=toContainer.getBoundingClientRect();
@@ -697,7 +684,33 @@ function animateFromDiscardTo(side,dest,letter){
   setTimeout(()=>{ if(ghost.parentNode) ghost.parentNode.removeChild(ghost); }, 600);
 }
 
-/* Choices (no numbering) */
+/* ===== Layout helpers ===== */
+function fitHandToSeven(){
+  const row=document.getElementById('youHand');
+  const w=row.clientWidth; const gaps=8*6; // gap*6 between 7 cards
+  const target=Math.floor((w-gaps)/7);
+  const max=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w').match(/\d+/));
+  const cardW=Math.max(44, Math.min(target, max||128));
+  document.documentElement.style.setProperty('--card-w-hand', cardW+'px');
+}
+
+let scaleApplied=1;
+function fitMobileScale(){
+  // For small screens we scale boardGrid down so AI space + You space + hand are visible.
+  if(window.innerWidth>=900){ document.getElementById('boardGrid').style.transform='scale(1)'; scaleApplied=1; return; }
+  const grid=document.getElementById('boardGrid');
+  const headerH=document.querySelector('header').getBoundingClientRect().height;
+  const avail=window.innerHeight - headerH - 6; if(avail<=0) return;
+  // measure natural height
+  const prev=grid.style.transform; grid.style.transform='scale(1)';
+  const natural=grid.getBoundingClientRect().height;
+  let s=Math.min(1, avail / natural);
+  s = Math.max(0.75, Math.min(1, s)); // clamp
+  grid.style.transform=`scale(${s})`;
+  scaleApplied=s;
+}
+
+/* ===== Choices, win check, menu & help (unchanged) ===== */
 function chooseType(title,options,cb){
   const modal=document.getElementById('choiceModal'); document.getElementById('choiceTitle').textContent=tt('choose')+': '+title;
   const area=document.getElementById('choiceArea'); area.innerHTML='';
@@ -710,8 +723,6 @@ function chooseIndex(title,list,cb){
   list.forEach((letter,idx)=>{ const b=document.createElement('button'); b.className='choice'; b.textContent=letter; b.addEventListener('click',()=>{ modal.style.display='none'; cb(idx);}); area.appendChild(b); });
   modal.style.display='flex';
 }
-
-/* Win check */
 function checkWin(){
   function hasFIRST(space){ const set=new Set(space); return ['F','I','R','S','T'].every(t=>set.has(t)); }
   function hasFiveSame(space){ const m={F:0,I:0,R:0,S:0,T:0}; space.forEach(c=>m[c]++); return Object.values(m).some(v=>v>=5); }
@@ -726,8 +737,6 @@ function checkWin(){
   }
   return false;
 }
-
-/* Menu & help */
 document.getElementById('menuNewGame').addEventListener('click', ()=>{ document.getElementById('menu').style.display='none'; newGame(); });
 document.getElementById('menuRules').addEventListener('click', ()=>{ document.getElementById('menu').style.display='none'; document.getElementById('helpModal').style.display='flex'; });
 document.getElementById('toMenuBtn').addEventListener('click', ()=>{ document.getElementById('menu').style.display='flex'; });
@@ -742,7 +751,12 @@ document.getElementById('toggleLog').addEventListener('click', ()=>{
   const p=document.getElementById('logPanel'); p.classList.toggle('collapsed'); applyTexts();
 });
 
+/* Dice helpers */
+function faceRotation(v){ switch(v){ case 1:return{x:0,y:0}; case 2:return{x:0,y:-90}; case 3:return{x:0,y:180}; case 4:return{x:0,y:90}; case 5:return{x:-90,y:0}; case 6:return{x:90,y:0}; } return{x:0,y:0}; }
+
 applyTexts();
+window.addEventListener('resize', ()=>{ fitHandToSeven(); fitMobileScale(); });
+window.addEventListener('orientationchange', ()=>{ setTimeout(()=>{ fitHandToSeven(); fitMobileScale(); }, 300); });
 </script>
 </body>
 </html>
