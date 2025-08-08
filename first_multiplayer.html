@@ -4,274 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <title>F!RST — v18</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js">
-/* ===== P2P WebRTC (manual signaling) ===== */
-let MP = {
-  enabled:false, role:null, // 'host' or 'guest'
-  pc:null, dc:null, hb:null, lastHeard:0, timeoutSec:60,
-  awaitingChoice:null // if host asks guest to choose
-};
-
-function mpLog(s){ const st=document.getElementById('mpStatus'); if(st) st.textContent=s; }
-
-function mpReset(){
-  try{ if(MP.hb) clearInterval(MP.hb); }catch{}
-  if(MP.dc){ try{MP.dc.close();}catch{} MP.dc=null; }
-  if(MP.pc){ try{MP.pc.close();}catch{} MP.pc=null; }
-  MP.enabled=false; MP.role=null; MP.awaitingChoice=null;
-  mpLog('Not connected');
-  document.getElementById('mpDisconnect').style.display='none';
-}
-
-function mpSetupPeer(asHost){
-  MP.pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-  if(asHost){
-    MP.role='host';
-    MP.dc = MP.pc.createDataChannel('game');
-    mpWireDC();
-  }else{
-    MP.role='guest';
-    MP.pc.ondatachannel = (ev)=>{ MP.dc = ev.channel; mpWireDC(); };
-  }
-  MP.pc.onicecandidate = (e)=>{
-    // ICE completes when e.candidate==null; we keep SDP as JSON
-  };
-  MP.pc.onconnectionstatechange = ()=>{
-    if(['failed','disconnected','closed'].includes(MP.pc.connectionState)){
-      mpLog('Disconnected'); mpReset();
-    }
-  };
-}
-
-function mpWireDC(){
-  MP.dc.onopen = ()=>{
-    MP.enabled=true; mpLog(MP.role==='host'?'Connected (Host)':'Connected (Guest)');
-    document.getElementById('mpDisconnect').style.display='inline-block';
-    // Heartbeat
-    MP.lastHeard = Date.now();
-    MP.hb = setInterval(()=>{
-      if(!MP.dc || MP.dc.readyState!=='open') return;
-      if(Date.now()-MP.lastHeard > MP.timeoutSec*1000){
-        mpLog('Peer timed out'); mpReset(); return;
-      }
-      MP.dc.send(JSON.stringify({type:'ping', t:Date.now()}));
-    }, 10000);
-    if(MP.role==='host'){
-      // Start a fresh multiplayer game and send state
-      newGame(); // uses existing AI labels; we'll relabel
-      document.getElementById('aiHandKey').textContent='Friend hand';
-      document.getElementById('aiSpaceTitle').textContent='SPACE — Friend';
-      document.getElementById('aiDiscardTitle').textContent='DISCARD — Friend';
-      // send init full state
-      mpSendState();
-    }
-  };
-  MP.dc.onmessage = (ev)=>{
-    MP.lastHeard = Date.now();
-    let msg; try{ msg=JSON.parse(ev.data);}catch{ return; }
-    if(msg.type==='ping'){ try{ MP.dc.send(JSON.stringify({type:'pong', t:Date.now()})); }catch{} return; }
-    if(msg.type==='pong'){ return; }
-    if(MP.role==='host'){
-      // guest -> host
-      if(msg.type==='action' && msg.action==='play' && typeof msg.index==='number'){
-        // Only allow if it's guest's turn mapped to 'ai'
-        if(G.turn==='ai' && !G.over){
-          // simulate guest playing its hand index
-          const idx=msg.index;
-          if(G.ai.hand[idx]){
-            const letter=G.ai.hand[idx];
-            if(G.traps.forbidAI===letter){
-              G.traps.forbidAI=null;
-              const fake=document.createElement('div'); fake.className='card'; fake.appendChild(Object.assign(document.createElement('div'),{className:'L '+letter,textContent:letter}));
-              document.getElementById('aiSpace').appendChild(fake);
-              setTimeout(()=>{
-                animateFly(fake, document.getElementById('aiDiscard'));
-                if(fake.parentNode) fake.parentNode.removeChild(fake);
-              }, 50);
-              G.ai.hand.splice(idx,1); G.ai.discard.push(letter);
-              logAdd(`Friend's ${letter} was forbidden → DISCARD.`);
-              render(); if(!checkWin()) setTimeout(endTurn, 650);
-              mpSendState();
-              return;
-            }
-            G.ai.hand.splice(idx,1); G.ai.space.push(letter);
-            animateFly(null, document.getElementById('aiSpace'));
-            logAdd(`Friend played ${letter}.`); render();
-            // Resolve effects requiring choices: if need guest choice, ask
-            mpResolveEffectGuest(letter, ()=>{ if(!checkWin()) endTurn(); mpSendState(); });
-            return;
-          }
-        }
-      }else if(msg.type==='choice' && MP.awaitingChoice){
-        // host continues with guest's choice
-        const {kind, cb} = MP.awaitingChoice;
-        MP.awaitingChoice=null;
-        if(kind==='F'){ // tChosen in msg.value
-          G.traps.forbidYou = msg.value;
-          logAdd("Friend forbade a letter for you."); render(); cb();
-          mpSendState();
-        }else if(kind==='S'){
-          const i = msg.index;
-          if(typeof i==='number' && G.you.space[i]!=null){
-            animateFromSpaceOrHand('you','space',i, document.getElementById('youDiscard'));
-            const removed=G.you.space.splice(i,1)[0]; G.you.discard.push(removed);
-            logAdd(`Friend stole your ${removed} to your DISCARD.`);
-            render(); cb(); mpSendState();
-          }else{ cb(); mpSendState(); }
-        }else if(kind==='R'){
-          // value is letter to recover
-          const S=G.ai;
-          const idx=S.discard.lastIndexOf(msg.value);
-          if(idx>=0){ const c=S.discard.splice(idx,1)[0]; S.hand.push(c); animateFromDiscardTo('ai','hand', c); logAdd("Friend recovered a card to hand."); enforceHandLimit('ai'); }
-          render(); cb(); mpSendState();
-        }
-      }
-    }else{
-      // host -> guest
-      if(msg.type==='state'){ G = msg.G; render(); return; }
-      if(msg.type==='requestChoice'){
-        if(msg.kind==='F'){
-          chooseType(tt('pickForbid'), TYPES, (tChosen)=>{
-            MP.dc.send(JSON.stringify({type:'choice', kind:'F', value:tChosen}));
-          });
-        }else if(msg.kind==='S'){
-          chooseIndex(tt('pickSteal'), G.you.space, (i)=>{
-            MP.dc.send(JSON.stringify({type:'choice', kind:'S', index:i}));
-          });
-        }else if(msg.kind==='R'){
-          chooseType(tt('pickRecover'), Array.from(new Set(G.ai.discard)), (pick)=>{
-            MP.dc.send(JSON.stringify({type:'choice', kind:'R', value:pick}));
-          });
-        }
-      }else if(msg.type==='quit'){
-        mpReset(); alert('Peer disconnected.');
-      }
-    }
-  };
-}
-
-function mpResolveEffectGuest(letter, done){
-  // Host resolves effect as if 'ai' player, but asks guest when needed
-  if(letter==='F'){
-    MP.awaitingChoice = {kind:'F', cb:()=>{ render(); done(); }};
-    MP.dc.send(JSON.stringify({type:'requestChoice', kind:'F'}));
-    return;
-  }
-  if(letter==='I'){ draw('ai',1); done(); return; }
-  if(letter==='R'){
-    if(G.ai.discard.length===0){ done(); return; }
-    MP.awaitingChoice = {kind:'R', cb:()=>{ render(); done(); }};
-    MP.dc.send(JSON.stringify({type:'requestChoice', kind:'R'}));
-    return;
-  }
-  if(letter==='S'){
-    if(G.you.space.length===0){ done(); return; }
-    MP.awaitingChoice = {kind:'S', cb:()=>{ render(); done(); }};
-    MP.dc.send(JSON.stringify({type:'requestChoice', kind:'S'}));
-    return;
-  }
-  if(letter==='T'){ G.traps.tNextYou++; logAdd(tt('tAI')); done(); return; }
-  done();
-}
-
-function mpSendState(){
-  if(MP.enabled && MP.dc && MP.dc.readyState==='open'){
-    try{ MP.dc.send(JSON.stringify({type:'state', G})); }catch(e){ console.error(e); }
-  }
-}
-
-function mpDisconnect(){
-  if(MP.enabled && MP.dc && MP.dc.readyState==='open'){
-    try{ MP.dc.send(JSON.stringify({type:'quit'})); }catch{}
-  }
-  mpReset();
-  // restore labels
-  document.getElementById('aiHandKey').textContent='AI hand';
-  document.getElementById('aiSpaceTitle').textContent='SPACE — AI';
-  document.getElementById('aiDiscardTitle').textContent='DISCARD — AI';
-  // back to solo mode
-  newGame();
-}
-
-/* ===== UI wiring for MP modal ===== */
-function setupMPUI(){
-  const modal = document.getElementById('mpModal');
-  const showHostPanel = (show)=>{
-    document.getElementById('mpHostPanel').style.display = show?'block':'none';
-    document.getElementById('mpJoinPanel').style.display = show?'none':'block';
-  };
-  on('menuP2P','click', ()=>{ const m=document.getElementById('menu'); if(m) m.style.display='none'; modal.style.display='flex'; mpLog('Not connected'); showHostPanel(true); });
-  on('mpClose','click', ()=>{ modal.style.display='none'; });
-  on('mpHost','click', ()=>{ showHostPanel(true); });
-  on('mpJoin','click', ()=>{ showHostPanel(false); });
-  on('mpDisconnect','click', ()=>{ mpDisconnect(); });
-
-  on('mpCreateOffer','click', async()=>{
-    mpReset();
-    mpSetupPeer(true);
-    const pc=MP.pc;
-    const offer=await pc.createOffer({offerToReceiveAudio:false, offerToReceiveVideo:false});
-    await pc.setLocalDescription(offer);
-    // wait ICE
-    await new Promise(r=>setTimeout(r, 800));
-    const blob=btoa(unescape(encodeURIComponent(JSON.stringify(pc.localDescription))));
-    document.getElementById('mpOfferOut').value = blob;
-    mpLog('Offer created. Send code to your friend.');
-  });
-
-  on('mpApplyAnswer','click', async()=>{
-    const ansTxt=document.getElementById('mpAnswerIn').value.trim();
-    if(!ansTxt) return;
-    try{
-      const desc=JSON.parse(decodeURIComponent(escape(atob(ansTxt))));
-      await MP.pc.setRemoteDescription(new RTCSessionDescription(desc));
-      mpLog('Answer applied. Waiting for connection...');
-    }catch(e){ mpLog('Invalid Answer'); }
-  });
-
-  on('mpCreateAnswer','click', async()=>{
-    mpReset();
-    mpSetupPeer(false);
-    const offerTxt=document.getElementById('mpOfferIn').value.trim();
-    if(!offerTxt) { mpLog('Paste host offer first'); return; }
-    try{
-      const offer=JSON.parse(decodeURIComponent(escape(atob(offerTxt))));
-      await MP.pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer=await MP.pc.createAnswer();
-      await MP.pc.setLocalDescription(answer);
-      await new Promise(r=>setTimeout(r, 800));
-      const blob=btoa(unescape(encodeURIComponent(JSON.stringify(MP.pc.localDescription))));
-      document.getElementById('mpAnswerOut').value=blob;
-      mpLog('Answer ready. Send it to host.');
-    }catch(e){ mpLog('Invalid Offer'); }
-  });
-
-  // Quick menu disconnect
-  on('qmDisconnect','click', ()=>{ mpDisconnect(); });
-}
-
-/* ===== Multiplayer-aware input routing ===== */
-const _playFromHand_local = playFromHand;
-playFromHand = function(index){ if(!window.G){ return; }
-  if(MP.enabled){
-    if(MP.role==='host'){
-      // host is 'you' player; local play allowed only when G.turn==='you'
-      if(G.turn!=='you') return;
-      _playFromHand_local(index);
-      mpSendState();
-    }else{
-      // guest is 'ai' player; send action to host when it's guest turn
-      if(G.turn!=='ai') return;
-      if(MP.dc && MP.dc.readyState==='open'){
-        MP.dc.send(JSON.stringify({type:'action', action:'play', index}));
-      }
-    }
-  }else{
-    _playFromHand_local(index);
-  }
-};
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
 :root{ --zone-k: 0.78; --zone-c: 20px;
   --page-max: 1280px;
@@ -1437,5 +1170,187 @@ playFromHand = function(index){ if(!window.G){ return; }
 };
 
 </script>
+
+<script>
+/* ===== P2P WebRTC (manual signaling, consolidated) ===== */
+let MP = { enabled:false, role:null, pc:null, dc:null, hb:null, lastHeard:0, timeoutSec:60, awaitingChoice:null };
+function mpLog(s){ const st=document.getElementById('mpStatus'); if(st) st.textContent=s; }
+function mpReset(){ try{ if(MP.hb) clearInterval(MP.hb); }catch{}; try{MP.dc&&MP.dc.close();}catch{}; try{MP.pc&&MP.pc.close();}catch{};
+  MP.dc=null; MP.pc=null; MP.enabled=false; MP.role=null; MP.awaitingChoice=null; mpLog('Not connected');
+  const d=document.getElementById('mpDisconnect'); if(d) d.style.display='none'; }
+function mpSetupPeer(asHost){
+  MP.pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+  if(asHost){ MP.role='host'; MP.dc = MP.pc.createDataChannel('game'); mpWireDC(); }
+  else { MP.role='guest'; MP.pc.ondatachannel = (ev)=>{ MP.dc = ev.channel; mpWireDC(); }; }
+  MP.pc.onconnectionstatechange = ()=>{ if(['failed','disconnected','closed'].includes(MP.pc.connectionState)){ mpLog('Disconnected'); mpReset(); } };
+}
+function mpWireDC(){
+  MP.dc.onopen = ()=>{
+    MP.enabled=true; mpLog(MP.role==='host'?'Connected (Host)':'Connected (Guest)');
+    const d=document.getElementById('mpDisconnect'); if(d) d.style.display='inline-block';
+    const mm=document.getElementById('mpModal'); if(mm) mm.style.display='none';
+    const m=document.getElementById('menu'); if(m) m.style.display='none';
+    // Heartbeat
+    MP.lastHeard=Date.now();
+    MP.hb=setInterval(()=>{ if(!MP.dc||MP.dc.readyState!=='open') return;
+      if(Date.now()-MP.lastHeard > MP.timeoutSec*1000){ mpLog('Peer timed out'); mpReset(); return; }
+      MP.dc.send(JSON.stringify({type:'ping', t:Date.now()}));
+    }, 10000);
+    if(MP.role==='host'){
+      newGame();
+      const h=document.getElementById('aiHandKey'); if(h) h.textContent='Friend hand';
+      const s=document.getElementById('aiSpaceTitle'); if(s) s.textContent='SPACE — Friend';
+      const d=document.getElementById('aiDiscardTitle'); if(d) d.textContent='DISCARD — Friend';
+      mpSendState();
+    }
+  };
+  MP.dc.onmessage = (ev)=>{
+    MP.lastHeard = Date.now();
+    let msg; try{ msg=JSON.parse(ev.data);}catch{ return; }
+    if(msg.type==='ping'){ try{ MP.dc.send(JSON.stringify({type:'pong', t:Date.now()})); }catch{} return; }
+    if(msg.type==='pong'){ return; }
+    if(MP.role==='host'){
+      if(msg.type==='action' && msg.action==='play' && typeof msg.index==='number'){
+        if(G && G.turn==='ai' && !G.over){
+          const idx=msg.index;
+          if(G.ai.hand[idx]){
+            const letter=G.ai.hand[idx];
+            if(G.traps.forbidAI===letter){
+              G.traps.forbidAI=null;
+              const fake=document.createElement('div'); fake.className='card'; fake.appendChild(Object.assign(document.createElement('div'),{className:'L '+letter,textContent:letter}));
+              document.getElementById('aiSpace').appendChild(fake);
+              setTimeout(()=>{ animateFly(fake, document.getElementById('aiDiscard')); if(fake.parentNode) fake.parentNode.removeChild(fake); }, 50);
+              G.ai.hand.splice(idx,1); G.ai.discard.push(letter); logAdd(`Friend's ${letter} was forbidden → DISCARD.`);
+              render(); if(!checkWin()) setTimeout(endTurn, 650); mpSendState(); return;
+            }
+            G.ai.hand.splice(idx,1); G.ai.space.push(letter);
+            animateFly(null, document.getElementById('aiSpace'));
+            logAdd(`Friend played ${letter}.`); render();
+            mpResolveEffectGuest(letter, ()=>{ if(!checkWin()) endTurn(); mpSendState(); });
+            return;
+          }
+        }
+      }else if(msg.type==='choice' && MP.awaitingChoice){
+        const {kind, cb} = MP.awaitingChoice; MP.awaitingChoice=null;
+        if(kind==='F'){ G.traps.forbidYou = msg.value; logAdd("Friend forbade a letter for you."); render(); cb(); mpSendState(); }
+        else if(kind==='S'){ const i=msg.index; if(typeof i==='number' && G.you.space[i]!=null){ animateFromSpaceOrHand('you','space',i, document.getElementById('youDiscard'));
+          const removed=G.you.space.splice(i,1)[0]; G.you.discard.push(removed); logAdd(`Friend stole your ${removed} to your DISCARD.`); render(); }
+          cb(); mpSendState(); }
+        else if(kind==='R'){ const idx=G.ai.discard.lastIndexOf(msg.value); if(idx>=0){ const c=G.ai.discard.splice(idx,1)[0]; G.ai.hand.push(c); animateFromDiscardTo('ai','hand', c); logAdd("Friend recovered a card to hand."); enforceHandLimit('ai'); }
+          render(); cb(); mpSendState(); }
+      }
+    }else{
+      if(msg.type==='state'){ G = msg.G; if(typeof msg.elapsed==='number'){ elapsed=msg.elapsed; } const mm=document.getElementById('mpModal'); if(mm) mm.style.display='none'; const m=document.getElementById('menu'); if(m) m.style.display='none'; if(!timerId){ startTimer(false); } render(); return; }
+      if(msg.type==='requestChoice'){
+        if(msg.kind==='F'){ chooseType(tt('pickForbid'), TYPES, (t)=>{ MP.dc.send(JSON.stringify({type:'choice', kind:'F', value:t})); }); }
+        else if(msg.kind==='S'){ chooseIndex(tt('pickSteal'), G.you.space, (i)=>{ MP.dc.send(JSON.stringify({type:'choice', kind:'S', index:i})); }); }
+        else if(msg.kind==='R'){ chooseType(tt('pickRecover'), Array.from(new Set(G.ai.discard)), (v)=>{ MP.dc.send(JSON.stringify({type:'choice', kind:'R', value:v})); }); }
+      }else if(msg.type==='quit'){ mpReset(); alert('Peer disconnected.'); }
+    }
+  };
+}
+function mpResolveEffectGuest(letter, done){
+  if(letter==='F'){ MP.awaitingChoice={kind:'F', cb:()=>{ render(); done(); }}; MP.dc.send(JSON.stringify({type:'requestChoice', kind:'F'})); return; }
+  if(letter==='I'){ draw('ai',1); done(); return; }
+  if(letter==='R'){ if(G.ai.discard.length===0){ done(); return; } MP.awaitingChoice={kind:'R', cb:()=>{ render(); done(); }}; MP.dc.send(JSON.stringify({type:'requestChoice', kind:'R'})); return; }
+  if(letter==='S'){ if(G.you.space.length===0){ done(); return; } MP.awaitingChoice={kind:'S', cb:()=>{ render(); done(); }}; MP.dc.send(JSON.stringify({type:'requestChoice', kind:'S'})); return; }
+  if(letter==='T'){ G.traps.tNextYou++; logAdd(tt('tAI')); done(); return; }
+  done();
+}
+function mpSendState(){ if(MP.enabled && MP.dc && MP.dc.readyState==='open'){ try{ MP.dc.send(JSON.stringify({type:'state', G, elapsed})); }catch(e){ console.error(e);} } }
+function mpDisconnect(){ if(MP.enabled && MP.dc && MP.dc.readyState==='open'){ try{ MP.dc.send(JSON.stringify({type:'quit'})); }catch{} } mpReset();
+  const h=document.getElementById('aiHandKey'); if(h) h.textContent='AI hand';
+  const s=document.getElementById('aiSpaceTitle'); if(s) s.textContent='SPACE — AI';
+  const d=document.getElementById('aiDiscardTitle'); if(d) d.textContent='DISCARD — AI';
+  newGame(); }
+function setupMPUI(){
+  const modal=document.getElementById('mpModal');
+  const showHostPanel=(show)=>{ document.getElementById('mpHostPanel').style.display=show?'block':'none'; document.getElementById('mpJoinPanel').style.display=show?'none':'block'; };
+  on('menuP2P','click', ()=>{ const m=document.getElementById('menu'); if(m) m.style.display='none'; modal.style.display='flex'; mpLog('Not connected'); showHostPanel(true); });
+  on('mpClose','click', ()=>{ modal.style.display='none'; });
+  on('mpHost','click', ()=>{ showHostPanel(true); });
+  on('mpJoin','click', ()=>{ showHostPanel(false); });
+  on('mpDisconnect','click', ()=>{ mpDisconnect(); });
+  on('mpCreateOffer','click', async()=>{ mpReset(); mpSetupPeer(true); const pc=MP.pc;
+    const offer=await pc.createOffer({offerToReceiveAudio:false,offerToReceiveVideo:false}); await pc.setLocalDescription(offer);
+    await new Promise(r=>setTimeout(r,800)); const blob=btoa(unescape(encodeURIComponent(JSON.stringify(pc.localDescription))));
+    document.getElementById('mpOfferOut').value=blob; mpLog('Offer created. Send code to your friend.'); });
+  on('mpApplyAnswer','click', async()=>{ const ansTxt=document.getElementById('mpAnswerIn').value.trim(); if(!ansTxt) return;
+    try{ const desc=JSON.parse(decodeURIComponent(escape(atob(ansTxt)))); await MP.pc.setRemoteDescription(new RTCSessionDescription(desc)); mpLog('Answer applied. Waiting for connection...'); }catch(e){ mpLog('Invalid Answer'); } });
+  on('mpCreateAnswer','click', async()=>{ mpReset(); mpSetupPeer(false); const offerTxt=document.getElementById('mpOfferIn').value.trim(); if(!offerTxt){ mpLog('Paste host offer first'); return; }
+    try{ const offer=JSON.parse(decodeURIComponent(escape(atob(offerTxt)))); await MP.pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer=await MP.pc.createAnswer(); await MP.pc.setLocalDescription(answer); await new Promise(r=>setTimeout(r,800));
+      const blob=btoa(unescape(encodeURIComponent(JSON.stringify(MP.pc.localDescription)))); document.getElementById('mpAnswerOut').value=blob; mpLog('Answer ready. Send it to host.'); }
+    catch(e){ mpLog('Invalid Offer'); } });
+  on('qmDisconnect','click', ()=>{ mpDisconnect(); });
+}
+
+/* ===== Perspective mapping in render/HUD/highlight ===== */
+(function(){
+  // Guarded setHUD override
+  const _setHUD = window.setHUD;
+  window.setHUD = function(){
+    if(!window.G || (!G.you && !G.ai)){ try{ _setHUD&&_setHUD(); }catch{} return; }
+    const isGuest = MP.enabled && MP.role==='guest';
+    const MY  = isGuest ? G.ai : G.you;
+    const OPP = isGuest ? G.you : G.ai;
+    const myTurn = (G.turn === (isGuest ? 'ai' : 'you'));
+    try{
+      document.getElementById('youHandCount').textContent = (MY && MY.hand)? MY.hand.length : 0;
+      document.getElementById('aiHandCount').textContent  = (OPP && OPP.hand)? OPP.hand.length : 0;
+      document.getElementById('turnLbl').textContent      = G.over? tt('gameOver') : (myTurn? tt('you') : (MP.enabled? 'Friend' : tt('ai')));
+    }catch{}
+    try{ _setHUD&&_setHUD(); }catch{}
+  };
+
+  // Render override to map MY/OPP
+  const _render = window.render;
+  window.render = function(){
+    try{ _render&&_render(); }catch{}
+    if(!window.G || !G.you || !G.ai){ return; }
+    const isGuest = MP.enabled && MP.role==='guest';
+    const MY  = isGuest ? G.ai : G.you;
+    const OPP = isGuest ? G.you : G.ai;
+    const myTurn = (G.turn === (isGuest ? 'ai' : 'you'));
+
+    const aiS=document.getElementById('aiSpace'); if(aiS){ aiS.innerHTML=''; (OPP.space||[]).forEach(c=> aiS.appendChild(cardEl(c))); }
+    const youS=document.getElementById('youSpace'); if(youS){ youS.innerHTML=''; (MY.space||[]).forEach(c=> youS.appendChild(cardEl(c))); }
+    const hand=document.getElementById('youHand'); if(hand){ hand.innerHTML=''; (MY.hand||[]).forEach((c,i)=> hand.appendChild(cardEl(c,{hand:true, clickable:myTurn && !G.over, onClick:()=>playFromHand(i)}))); }
+    renderDiscard('aiDiscard', OPP.discard||[]);
+    renderDiscard('youDiscard', MY.discard||[]);
+    updateForbidFX();
+  };
+
+  // Turn highlight override
+  const _hl = window.updateTurnHighlight;
+  window.updateTurnHighlight = function(){
+    try{ _hl&&_hl(); }catch{}
+    if(!window.G){ return; }
+    const youP=document.getElementById('panelYouSpace');
+    const aiP =document.getElementById('panelAiSpace');
+    if(!youP || !aiP) return;
+    const isGuest = MP.enabled && MP.role==='guest';
+    const myTurn = (G.turn === (isGuest ? 'ai' : 'you'));
+    youP.classList.toggle('activeTurn', myTurn && !G.over);
+    aiP.classList.toggle('activeTurn', !myTurn && !G.over);
+  };
+})();
+
+// Multiplayer-aware input routing
+const _playFromHand_local = window.playFromHand;
+window.playFromHand = function(index){
+  if(!window.G){ return; }
+  if(MP.enabled){
+    if(MP.role==='host'){
+      if(G.turn!=='you') return;
+      _playFromHand_local(index); mpSendState();
+    }else{
+      if(G.turn!=='ai') return;
+      if(MP.dc && MP.dc.readyState==='open'){ MP.dc.send(JSON.stringify({type:'action', action:'play', index})); }
+    }
+  }else{ _playFromHand_local(index); }
+};
+</script>
+
 </body>
 </html>
