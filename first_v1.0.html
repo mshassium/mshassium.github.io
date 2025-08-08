@@ -526,6 +526,15 @@ function defeat(side){
   document.getElementById('winModal').style.display='flex';
 }
 
+function checkWin(){
+  // Check win conditions for both sides
+  const hasAll = (arr)=> TYPES.every(t=> arr.includes(t));
+  const fiveOfOne = (arr)=> TYPES.some(t=> arr.filter(x=>x===t).length>=5);
+  if(hasAll(G.you.space) || fiveOfOne(G.you.space)){ defeat('ai'); return true; }
+  if(hasAll(G.ai.space)  || fiveOfOne(G.ai.space)){ defeat('you'); return true; }
+  return false;
+}
+
 function playFromHand(index){
   if(G.over || G.turn!=='you') return;
   const letter=G.you.hand[index]; if(!letter) return;
@@ -782,62 +791,71 @@ function fitMobileScale(){
 }
 
 /* ===== Choices, win check, menu & help ===== */
-function chooseType(title,options,cb){
-  const modal=document.getElementById('choiceModal'); document.getElementById('choiceTitle').textContent=tt('choose')+': '+title;
-  const area=document.getElementById('choiceArea'); area.innerHTML='';
-  options.forEach(o=>{ const b=document.createElement('button'); b.className='choice'; b.textContent=o; b.addEventListener('click',()=>{ modal.style.display='none'; cb(o);}); area.appendChild(b); });
+function chooseType(title, options, cb){
+  const modal = document.getElementById('choiceModal');
+  const ttl   = document.getElementById('choiceTitle');
+  const area  = document.getElementById('choiceArea');
+  if(!modal||!ttl||!area) return;
+  ttl.textContent = tt('choose') + ': ' + title;
+  area.innerHTML='';
+  options.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='btn';
+    b.textContent=o;
+    b.addEventListener('click', ()=>{ modal.style.display='none'; cb(o); });
+    area.appendChild(b);
+  });
   modal.style.display='flex';
 }
-function chooseIndex(title,list,cb){
-  const modal=document.getElementById('choiceModal'); document.getElementById('choiceTitle').textContent=tt('choose')+': '+title;
-  const area=document.getElementById('choiceArea'); area.innerHTML='';
-  list.forEach((letter,idx)=>{ const b=document.createElement('button'); b.className='choice'; b.textContent=letter; b.addEventListener('click',()=>{ modal.style.display='none'; cb(idx);}); area.appendChild(b); });
+function chooseIndex(title, list, cb){
+  const modal = document.getElementById('choiceModal');
+  const ttl   = document.getElementById('choiceTitle');
+  const area  = document.getElementById('choiceArea');
+  if(!modal||!ttl||!area) return;
+  ttl.textContent = tt('choose') + ': ' + title;
+  area.innerHTML='';
+  list.forEach((letter, idx)=>{
+    const b=document.createElement('button');
+    b.className='btn';
+    b.textContent=letter;
+    b.addEventListener('click', ()=>{ modal.style.display='none'; cb(idx); });
+    area.appendChild(b);
+  });
   modal.style.display='flex';
 }
-function checkWin(){
-  function hasFIRST(space){ const set=new Set(space); return ['F','I','R','S','T'].every(t=>set.has(t)); }
-  function hasFiveSame(space){ const m={F:0,I:0,R:0,S:0,T:0}; space.forEach(c=>m[c]++); return Object.values(m).some(v=>v>=5); }
-  const youWin=hasFIRST(G.you.space)||hasFiveSame(G.you.space);
-  const aiWin =hasFIRST(G.ai.space)||hasFiveSame(G.ai.space);
-  if(youWin || aiWin){
-    G.over=true;
-    document.getElementById('winTitle').textContent= youWin&&!aiWin? "Victory!" : (!youWin&&aiWin? "Defeat" : "Draw");
-    document.getElementById('winMsg').textContent = youWin&&!aiWin? 'You completed a combo.' : (!youWin&&aiWin? 'AI completed a combo.' : 'Both completed a combo.');
-    setTimeout(()=> document.getElementById('winModal').style.display='flex', 350);
-    return true;
+
+function on(id, ev, fn){ const el=document.getElementById(id); if(el) el.addEventListener(ev, fn); }
+function setupEvents(){
+  on('menuNewGame','click', ()=>{ const m=document.getElementById('menu'); if(m) m.style.display='none'; newGame(); });
+  on('menuRules','click', ()=>{ const m=document.getElementById('menu'); if(m) m.style.display='none'; const h=document.getElementById('helpModal'); if(h) h.style.display='flex'; });
+  on('toMenuBtn','click', ()=>{ const m=document.getElementById('menu'); if(m) m.style.display='flex'; });
+  on('restartBtn','click', ()=>{ newGame(); });
+  on('helpBtn','click', ()=>{ const h=document.getElementById('helpModal'); if(h) h.style.display='flex'; });
+  on('closeHelp','click', ()=>{ const h=document.getElementById('helpModal'); if(h) h.style.display='none'; });
+  on('winClose','click', ()=>{ const w=document.getElementById('winModal'); if(w) w.style.display='none'; });
+  on('winMenu','click', ()=>{ const w=document.getElementById('winModal'); if(w) w.style.display='none'; const m=document.getElementById('menu'); if(m) m.style.display='flex'; });
+  on('winNew','click', ()=>{ const w=document.getElementById('winModal'); if(w) w.style.display='none'; newGame(); });
+  on('langBtn','click', ()=>{ LANG=(LANG==='en')?'ru':'en'; applyTexts(); render(); });
+  on('toggleLog','click', ()=>{ const p=document.getElementById('logPanel'); if(p){ p.classList.toggle('collapsed'); applyTexts(); } });
+  // Hamburger
+  const burger=document.getElementById('hamburger');
+  const qMenu=document.getElementById('quickMenu');
+  if(burger && qMenu){
+    burger.addEventListener('click', (e)=>{ e.stopPropagation(); qMenu.style.display=(qMenu.style.display==='flex')?'none':'flex'; });
+    document.addEventListener('click', ()=>{ if(qMenu.style.display==='flex') qMenu.style.display='none'; });
   }
-  return false;
+  on('qmLang','click',(e)=>{ e.stopPropagation(); LANG=(LANG==='en')?'ru':'en'; applyTexts(); render(); });
+  on('qmRules','click',(e)=>{ e.stopPropagation(); const h=document.getElementById('helpModal'); if(h) h.style.display='flex'; });
+  on('qmNew','click',(e)=>{ e.stopPropagation(); newGame(); });
+  on('qmFull','click',(e)=>{ e.stopPropagation(); if(document.documentElement.requestFullscreen){ document.documentElement.requestFullscreen(); }});
 }
+// boot after DOM ready
+(function(){
+  const boot=()=>{ try{ computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale(); setupEvents(); render(); }catch(e){ console.error(e);} };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
+  else boot();
+})();
 
-/* ===== Events ===== */
-document.getElementById('menuNewGame').addEventListener('click', ()=>{ document.getElementById('menu').style.display='none'; newGame(); });
-document.getElementById('menuRules').addEventListener('click', ()=>{ document.getElementById('menu').style.display='none'; document.getElementById('helpModal').style.display='flex'; });
-document.getElementById('toMenuBtn').addEventListener('click', ()=>{ document.getElementById('menu').style.display='flex'; });
-document.getElementById('restartBtn').addEventListener('click', ()=>{ newGame(); });
-document.getElementById('helpBtn').addEventListener('click', ()=>{ document.getElementById('helpModal').style.display='flex'; });
-document.getElementById('closeHelp').addEventListener('click', ()=>{ document.getElementById('helpModal').style.display='none'; });
-document.getElementById('winClose').addEventListener('click', ()=>{ document.getElementById('winModal').style.display='none'; });
-document.getElementById('winMenu').addEventListener('click', ()=>{ document.getElementById('winModal').style.display='none'; document.getElementById('menu').style.display='flex'; });
-document.getElementById('winNew').addEventListener('click', ()=>{ document.getElementById('winModal').style.display='none'; newGame(); });
-document.getElementById('langBtn').addEventListener('click', ()=>{ LANG=(LANG==='en')?'ru':'en'; applyTexts(); render(); });
-document.getElementById('toggleLog').addEventListener('click', ()=>{
-  const p=document.getElementById('logPanel'); p.classList.toggle('collapsed'); applyTexts();
-});
-/* Burger */
-const burger=document.getElementById('hamburger');
-const qMenu=document.getElementById('quickMenu');
-if(burger && qMenu){
-  burger.addEventListener('click', (e)=>{ e.stopPropagation(); qMenu.style.display = (qMenu.style.display==='flex')?'none':'flex'; });
-  document.addEventListener('click', (e)=>{ if(qMenu.style.display==='flex') qMenu.style.display='none'; });
-}
-const qmLang=document.getElementById('qmLang'); if(qmLang){ qmLang.addEventListener('click', (e)=>{ e.stopPropagation(); LANG=(LANG==='en')?'ru':'en'; applyTexts(); render(); }); }
-const qmMenu=document.getElementById('qmMenu'); if(qmMenu){ qmMenu.addEventListener('click', (e)=>{ e.stopPropagation(); if(qMenu) qMenu.style.display='none'; document.getElementById('menu').style.display='flex'; }); }
-const qmHelp=document.getElementById('qmHelp'); if(qmHelp){ qmHelp.addEventListener('click', (e)=>{ e.stopPropagation(); if(qMenu) qMenu.style.display='none'; document.getElementById('helpModal').style.display='flex'; }); }
-const qmNew=document.getElementById('qmNew'); if(qmNew){ qmNew.addEventListener('click', (e)=>{ e.stopPropagation(); if(qMenu) qMenu.style.display='none'; newGame(); }); }
-
-applyTexts();
-let __rT; window.addEventListener('resize', ()=>{ clearTimeout(__rT); __rT=setTimeout(()=>{ computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale(); render(); }, 0); });
-window.addEventListener('orientationchange', ()=>{ setTimeout(()=>{ computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale(); render(); }, 150); });
 </script>
 </body>
 </html>
