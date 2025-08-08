@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<title>F!RST — Flat Ghibli (v13)</title>
+<title>F!RST — Flat Ghibli (v14)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
 :root{
-  --page-max: 1320px;
+  --page-max: 1280px;
   --bg:#0c1014;
   --panel-b:#232b39;
   --text:#f2f5fb; --muted:#aab3c2;
@@ -15,7 +15,7 @@
   --outline:#4a5a84;
   --ring:#3aa1ff80;
   --forbid:#ffd36b;
-  --card-w:clamp(86px, 13vw, 128px); /* default */
+  --card-w:clamp(86px, 12vw, 120px); /* default space card width */
   --card-w-hand: var(--card-w);      /* computed for hand to fit 7 */
   --gap:12px;
 }
@@ -37,7 +37,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .boardShell{position:relative;flex:1;overflow:hidden}
 .boardGrid{position:absolute;inset:56px 0 0 0;display:grid;grid-template-columns:1fr minmax(260px,320px);gap:var(--gap);overflow:hidden;padding:0 var(--gap) var(--gap) var(--gap);transform-origin:top left}
 
-.leftCol{display:grid;grid-template-rows:1fr 1fr auto;gap:var(--gap);min-width:0;min-height:0}
+.leftCol{display:grid;grid-template-rows:auto auto auto;gap:var(--gap);min-width:0;min-height:0}
 .rightCol{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:var(--gap);min-width:0;min-height:0}
 
 .panel{background:linear-gradient(180deg,#121722,#0e1420);border:1px solid var(--panel-b);border-radius:14px;padding:10px;
@@ -47,11 +47,13 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .chip{font-size:11px;padding:2px 6px;border:1px solid #2f3a56;border-radius:999px;background:#101828;color:#dbe5ff}
 .note{font-size:12px;color:var(--muted)}
 
+/* Space panels: just one row height */
 .boardFlat{position:relative;width:100%;border-radius:14px;background:linear-gradient(180deg,#182132,#0d1422);
   border:1px solid #2d3a55;box-shadow:inset 0 0 0 2px #0b101a, 0 10px 24px rgba(0,0,0,.30);overflow:hidden;contain:layout paint size;
-  min-height:140px;height:auto}
-.zone{position:absolute;inset:12px;display:flex;gap:10px;flex-wrap:nowrap;align-items:flex-start;overflow-x:auto;overflow-y:hidden}
+  height: calc(var(--card-w)*0.82 + 28px); /* one row + padding */}
+.zone{position:absolute;inset:12px;display:flex;gap:10px;flex-wrap:nowrap;align-items:flex-start;overflow-x:auto;overflow-y:hidden;border-radius:10px}
 
+/* Cards */
 .card{width:var(--card-w);height:calc(var(--card-w)*0.82);border-radius:12px;border:1px solid #2f3850;
   background:linear-gradient(180deg,#1d2536,#141b2a);display:flex;align-items:center;justify-content:center;position:relative;
   box-shadow:0 8px 14px rgba(0,0,0,.35), inset 0 0 0 2px #c8d2ee22;transition:transform .12s ease-out, box-shadow .12s ease-out}
@@ -61,8 +63,8 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .L{font-size:clamp(36px,6.6vw,58px);font-weight:1000;letter-spacing:2px;line-height:1;text-shadow:0 1px 0 #000}
 .L.F{color:#9cc8ff}.L.I{color:#a9ffcf}.L.R{color:#ffd195}.L.S{color:#ff9aa4}.L.T{color:#c6b3ff}
 
-/* Forbid FX only on F */
-.forbidFx{outline:2px solid var(--forbid);box-shadow:0 0 0 10px #ffd36b20 inset, 0 0 18px #ffd36b66;position:relative;animation:forbidPulse 1.2s ease-in-out infinite}
+/* Forbid FX only on F (no outline to avoid overflow bleed) */
+.forbidFx{box-shadow:0 0 0 3px var(--forbid), 0 0 0 2px var(--forbid) inset, 0 0 18px #ffd36b66;position:relative;animation:forbidPulse 1.2s ease-in-out infinite}
 @keyframes forbidPulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
 .badge{position:absolute;top:-8px;right:-8px;background:#0f1422;border:1px solid #2a3244;color:#1eeb8f;padding:2px 6px;font-size:12px;border-radius:10px;z-index:2;box-shadow:0 4px 10px rgba(0,0,0,.35)}
 
@@ -82,13 +84,13 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .handRow{display:flex;gap:8px;flex-wrap:nowrap;align-items:flex-start;padding:4px;overflow-x:auto}
 
 /* Log */
-.logPanel{min-height:0;display:flex;flex-direction:column;height:min(40vh,340px)}
+.logPanel{min-height:0;display:flex;flex-direction:column;height:300px}
 .logHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .log{flex:1 1 auto;min-height:0;overflow:auto;background:#0e1524;border:1px solid #25314a;border-radius:10px;padding:10px;color:#c6d0ec;font-size:13px;line-height:1.35}
 .logPanel.collapsed{height:42px}
 .logPanel.collapsed .log{display:none}
 
-/* Menu, modals, dice — same as v12 */
+/* Menu, modals, dice */
 .menu{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(1200px 600px at 50% 10%, #1a2440cc, transparent), linear-gradient(180deg,#0e1422f2,#0a0f18f2)}
 .menu .cardmenu{background:linear-gradient(180deg,#0f1728,#0b1220);border:1px solid #2d3754;border-radius:20px;padding:22px;width:min(520px,92vw);box-shadow:0 28px 56px rgba(0,0,0,.55);display:flex;flex-direction:column;align-items:center}
 .menu .muted{color:#acb6cf;font-size:14px;margin-bottom:12px}
@@ -118,18 +120,18 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 ::-webkit-scrollbar-track{background:#0b1019}
 ::-webkit-scrollbar-thumb{background:#22334a;border-radius:8px}
 
-/* Mobile reductions but keep layout */
+/* Mobile: smaller cards + taller panels first, then fit */
 @media (max-width: 900px){
-  :root{ --card-w: clamp(56px, 12vw, 96px); --gap:10px; --page-max: 1000px; }
+  :root{ --card-w: clamp(52px, 11vw, 88px); --gap:10px; --page-max: 1000px; }
   .pill{padding:4px 8px;font-size:11px}
   .title{font-size:13px}
-  .logPanel{height:min(28vh,240px)}
+  .logPanel{height:240px}
 }
 @media (max-width: 600px){
-  :root{ --card-w: clamp(48px, 12.5vw, 84px); --gap:8px; }
+  :root{ --card-w: clamp(40px, 10.5vw, 68px); --gap:8px; }
   .title{font-size:12px}
-  .L{font-size:clamp(28px, 8.5vw, 44px)}
-  .logPanel{height:min(26vh,200px)}
+  .L{font-size:clamp(26px, 8vw, 40px)}
+  .logPanel{height:200px}
 }
 </style>
 </head>
@@ -195,7 +197,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
   </div>
 </div>
 
-<!-- Menus and modals (same as v12) -->
+<!-- Menus and modals -->
 <div id="menu" class="menu" style="display:flex">
   <div class="cardmenu">
     <div class="muted" id="welcomeTxt">Welcome to F!RST</div>
@@ -254,7 +256,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 </div>
 
 <script>
-/* ===== i18n (same as v12) ===== */
+/* ===== i18n ===== */
 const I18N={
   en:{title:"F!RST — flat ghibli",turnKey:"Turn",diceKey:"Dice",yourHandKey:"Your hand",aiHandKey:"AI hand",hidden:"hidden",
       btnMenu:"Menu",btnNew:"New Game",welcome:"Welcome to F!RST",menuNew:"New Game",menuRules:"Rules",
@@ -340,7 +342,7 @@ function cardEl(letter, opts={}){
   return d;
 }
 
-/* ===== Game state and logic (same as v12) ===== */
+/* ===== Game state and logic (unchanged) ===== */
 const TYPES=['F','I','R','S','T'];
 let G=null, timerId=null, elapsed=0;
 function sideState(){ return { deck: buildDeck(), hand: [], space: [], discard: [] }; }
@@ -429,7 +431,7 @@ function startTimer(reset){
 }
 function formatElapsed(sec){ const m = Math.floor(sec/60).toString().padStart(2,'0'); const s=(sec%60).toString().padStart(2,'0'); return `${m}:${s}`; }
 
-/* ===== Flow (same as v12) ===== */
+/* ===== Flow (same as v13/v12) ===== */
 function draw(side,n){
   const S=(side==='you')?G.you:G.ai;
   for(let i=0;i<n;i++){
@@ -690,27 +692,26 @@ function fitHandToSeven(){
   const w=row.clientWidth; const gaps=8*6; // gap*6 between 7 cards
   const target=Math.floor((w-gaps)/7);
   const max=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w').match(/\d+/));
-  const cardW=Math.max(44, Math.min(target, max||128));
+  const cardW=Math.max(44, Math.min(target, max||120));
   document.documentElement.style.setProperty('--card-w-hand', cardW+'px');
 }
 
 let scaleApplied=1;
 function fitMobileScale(){
-  // For small screens we scale boardGrid down so AI space + You space + hand are visible.
-  if(window.innerWidth>=900){ document.getElementById('boardGrid').style.transform='scale(1)'; scaleApplied=1; return; }
+  // For <900px height/width, scale grid to fit whole board comfortably
   const grid=document.getElementById('boardGrid');
+  if(window.innerWidth>=1000){ grid.style.transform='scale(1)'; scaleApplied=1; return; }
   const headerH=document.querySelector('header').getBoundingClientRect().height;
   const avail=window.innerHeight - headerH - 6; if(avail<=0) return;
-  // measure natural height
   const prev=grid.style.transform; grid.style.transform='scale(1)';
   const natural=grid.getBoundingClientRect().height;
   let s=Math.min(1, avail / natural);
-  s = Math.max(0.75, Math.min(1, s)); // clamp
+  s = Math.max(0.65, Math.min(1, s)); // clamp to ensure it fits but stays usable
   grid.style.transform=`scale(${s})`;
   scaleApplied=s;
 }
 
-/* ===== Choices, win check, menu & help (unchanged) ===== */
+/* ===== Choices, win check, menu & help ===== */
 function chooseType(title,options,cb){
   const modal=document.getElementById('choiceModal'); document.getElementById('choiceTitle').textContent=tt('choose')+': '+title;
   const area=document.getElementById('choiceArea'); area.innerHTML='';
@@ -750,9 +751,6 @@ document.getElementById('langBtn').addEventListener('click', ()=>{ LANG=(LANG===
 document.getElementById('toggleLog').addEventListener('click', ()=>{
   const p=document.getElementById('logPanel'); p.classList.toggle('collapsed'); applyTexts();
 });
-
-/* Dice helpers */
-function faceRotation(v){ switch(v){ case 1:return{x:0,y:0}; case 2:return{x:0,y:-90}; case 3:return{x:0,y:180}; case 4:return{x:0,y:90}; case 5:return{x:-90,y:0}; case 6:return{x:90,y:0}; } return{x:0,y:0}; }
 
 applyTexts();
 window.addEventListener('resize', ()=>{ fitHandToSeven(); fitMobileScale(); });
