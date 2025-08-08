@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>F!RST — Flat Ghibli Prototype (v3)</title>
-<!-- GSAP for animations (no SRI); graceful fallback if unavailable -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>F!RST — Flat Ghibli (v5)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
   :root{
@@ -16,13 +15,14 @@
     --slot:#1b2030; --slot-b:#2a3244;
     --card:#1e2432; --card-b:#2f3850; --card-edge:#c8d2ee22;
     --outline:#4a5a84;
-    --pile:#0f1422;
-    --card-w:clamp(86px, 14.5vw, 140px);
     --ring:#3aa1ff80;
     --win:#44d18c; --lose:#e05b6f;
+    --forbid:#ffd36b; --forbid-strong:#ffb400; --forbid-trigger:#ff5e6e;
+    --card-w:clamp(86px, 14.5vw, 140px);
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden}
+  html,body{height:100svh; height:100dvh; margin:0; background:var(--bg); color:var(--text);
+    font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif; overflow:hidden; overscroll-behavior:none}
   body::before{
     content:""; position:fixed; inset:0; background:
       radial-gradient(ellipse at 20% 30%, rgba(255,255,255,.12), transparent 50%),
@@ -35,7 +35,10 @@
     background:linear-gradient(180deg, #122036, #0c1014); z-index:-2;
   }
 
-  .wrap{position:relative; width:100vw; height:100vh; display:flex; flex-direction:column}
+  .wrap{position:relative; width:100vw; height:100%; display:flex; flex-direction:column}
+  /* Rotatable container includes header and board so everything rotates together on portrait */
+  .rotatable{position:relative; width:100%; height:100%; transform-origin:center;}
+
   header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px}
   .titlebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   h1{font-size:18px;margin:0;color:var(--accent)}
@@ -44,36 +47,40 @@
   .btn{background:#1a2233;color:var(--text);border:1px solid var(--panel-b);border-radius:10px;padding:8px 12px;cursor:pointer}
   .btn:hover{background:#1f2a40}
   .icon-btn{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900}
-  .help{font-size:18px}
-  .menuBtn{font-weight:700}
 
-  /* Board layout (flat) */
+  /* Board layout */
   .boardWrap{
-    position:relative; flex:1; display:grid; grid-template-columns: 1fr minmax(200px,280px);
+    position:relative; flex:1; display:grid; grid-template-columns: 1fr minmax(220px,300px);
     gap:12px; padding:0 12px 12px 12px; overflow:hidden;
   }
   .leftCol{display:grid; grid-template-rows: minmax(180px,1fr) minmax(180px,1fr) auto; gap:12px; min-width:0; min-height:0}
-  .rightCol{display:flex; flex-direction:column; gap:12px; min-width:0}
+  /* Right column as grid so log can be 1fr and never overflow */
+  .rightCol{display:grid; grid-template-rows:auto auto 1fr; gap:12px; min-width:0; min-height:0}
 
-  .panel{background:linear-gradient(180deg, #121722, #0e1420);border:1px solid var(--panel-b);border-radius:14px;padding:10px; box-shadow: 0 10px 16px rgba(0,0,0,.22), inset 0 1px 0 #ffffff10; overflow:hidden}
-  .title{font-weight:800;margin-bottom:6px;font-size:14px;color:#dbe5ff; letter-spacing:.3px; text-shadow:0 1px 0 #000}
+  .panel{background:linear-gradient(180deg, #121722, #0e1420);border:1px solid var(--panel-b);border-radius:14px;padding:10px; box-shadow: 0 10px 16px rgba(0,0,0,.22), inset 0 1px 0 #ffffff10; overflow:hidden; min-height:0}
+  .title{font-weight:800;margin-bottom:6px;font-size:14px;color:#dbe5ff; letter-spacing:.3px; text-shadow:0 1px 0 #000; display:flex; align-items:center; gap:8px}
+  .chip{font-size:11px; padding:2px 6px; border:1px solid #2f3a56; border-radius:999px; background:#101828; color:#d8e1ff}
   .note{font-size:12px;color:var(--muted)}
 
-  /* Board: remove fixed height to prevent overflow */
   .boardFlat{position:relative; width:100%; border-radius:14px; background:linear-gradient(180deg, #182132, #0d1422);
     border:1px solid #2d3a55; box-shadow: inset 0 0 0 2px #0b101a, 0 10px 24px rgba(0,0,0,.30); overflow:hidden; contain:layout paint size;
     min-height:160px; height:auto;
   }
   .zone{position:absolute; inset:12px; display:flex; gap:10px; flex-wrap:wrap; align-content:flex-start}
-  .slot{min-width:var(--card-w); min-height:calc(var(--card-w)*0.82); border:1px dashed var(--slot-b); border-radius:12px; background:linear-gradient(180deg,#1c2438,#121a2a); display:flex; align-items:center; justify-content:center; box-shadow: inset 0 0 0 1px #101622}
 
-  .card{
-    width:var(--card-w); height:calc(var(--card-w)*0.82);
-    border-radius:12px; border:1px solid var(--card-b); background:linear-gradient(180deg, #1d2536, #141b2a);
-    display:flex; align-items:center; justify-content:center; position:relative;
-    box-shadow: 0 8px 14px rgba(0,0,0,.35), inset 0 0 0 2px var(--card-edge);
-    transition:transform .12s ease-out, box-shadow .12s ease-out, filter .12s ease-out;
-  }
+  /* Forbid visuals */
+  .forbidActive{box-shadow: 0 0 0 2px var(--forbid) inset, 0 0 0 8px #ffd36b22 inset, 0 0 18px #ffd36b55}
+  .forbidStripe{position:absolute; top:0; left:0; right:0; height:6px; background:linear-gradient(90deg, var(--forbid-strong), var(--forbid));}
+  .forbidBadge{position:absolute; top:8px; right:10px; font-weight:900; font-size:18px; color:#1c1520; background:var(--forbid); border:2px solid #2b1c00; border-radius:8px; padding:2px 8px; box-shadow:0 4px 10px #0007}
+  @keyframes forbidPulse{ 0%{transform:scale(1)} 50%{transform:scale(1.03)} 100%{transform:scale(1)} }
+  .forbidActive .boardFlat{animation:forbidPulse 1.2s ease-in-out infinite}
+  .forbidTriggered{box-shadow: 0 0 0 2px var(--forbid-trigger) inset, 0 0 28px #ff5e6e88}
+  .triggerFlash{position:absolute; inset:0; background:radial-gradient(ellipse at center, #ff5e6e55, transparent 55%); pointer-events:none; animation:flash .7s ease forwards}
+  @keyframes flash{ from{opacity:1} to{opacity:0} }
+
+  .card{width:var(--card-w); height:calc(var(--card-w)*0.82); border-radius:12px; border:1px solid var(--card-b);
+    background:linear-gradient(180deg, #1d2536, #141b2a); display:flex; align-items:center; justify-content:center; position:relative;
+    box-shadow: 0 8px 14px rgba(0,0,0,.35), inset 0 0 0 2px var(--card-edge); transition:transform .12s ease-out, box-shadow .12s ease-out, filter .12s ease-out;}
   .card.clickable{cursor:pointer}
   .card.clickable:hover{box-shadow: 0 10px 16px rgba(0,0,0,.4), 0 0 0 2px var(--outline) inset; transform:translateY(-2px)}
   .L{font-size:clamp(44px,7.8vw,64px); font-weight:1000; letter-spacing:2px; line-height:1; text-shadow: 0 1px 0 #000}
@@ -92,17 +99,19 @@
   .pile{position:relative; display:inline-flex; align-items:flex-end; gap:10px; flex-wrap:nowrap; padding-left:24px; max-width:100%}
   .pile .mini{width:38px; height:50px; background:linear-gradient(180deg,#1b2232,#111826); border:1px solid #2f3850; border-radius:7px; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 10px rgba(0,0,0,.28); flex:0 0 auto}
   .pile .mini b{font-size:22px; line-height:1; text-shadow:0 1px 0 #000}
-  .pile .mini + .mini{margin-left:-14px} /* controlled overlap, won't escape due to padding-left */
+  .pile .mini + .mini{margin-left:-14px}
   .pile .count{position:absolute; top:-8px; right:-8px; background:#0f1422; border:1px solid #2a3244; color:#dbe5ff; padding:2px 6px; font-size:12px; border-radius:999px}
 
   .handPanel{padding:10px}
   .handRow{display:flex; gap:8px; flex-wrap:wrap; align-items:flex-start; padding:4px}
 
-  .logPanel{height:150px}
-  .log{height:100%; overflow:auto; background:#0e1524; border:1px solid #25314a; border-radius:10px; padding:10px; color:#c6d0ec; font-size:13px; line-height:1.35}
+  /* Log panel as 1fr cell so it never leaks */
+  .logPanel{min-height:0; display:flex; flex-direction:column}
+  .logPanel .title{margin-bottom:6px}
+  .log{flex:1 1 auto; min-height:0; overflow:auto; background:#0e1524; border:1px solid #25314a; border-radius:10px; padding:10px; color:#c6d0ec; font-size:13px; line-height:1.35}
 
   /* Modals */
-  .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px; z-index:60; backdrop-filter: blur(2px)}
+  .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px; z-index:90; backdrop-filter: blur(2px)}
   .modal .box{background:#10182a; border:1px solid #2a3450; border-radius:14px; max-width:720px; width:100%; box-shadow:0 10px 24px rgba(0,0,0,.5)}
   .modal .head{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #253254}
   .modal .body{padding:12px}
@@ -110,22 +119,15 @@
   .choice{padding:8px 12px; border:1px solid #2a3142; border-radius:10px; background:#161b28; color:#dbe5ff; cursor:pointer}
   .choice:hover{outline:2px solid var(--outline)}
 
-  /* Menu overlay — bigger & fancier */
+  /* Menu overlay — vertical center buttons */
   .menu{position:fixed; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; padding:16px; background:radial-gradient(1200px 600px at 50% 10%, #1a2440cc, transparent), linear-gradient(180deg,#0e1422f2,#0a0f18f2)}
-  .menu .cardmenu{background:linear-gradient(180deg,#0f1728,#0b1220); border:1px solid #2d3754; border-radius:20px; padding:22px; width:min(760px,92vw); box-shadow:0 28px 56px rgba(0,0,0,.55)}
-  .menu h2{margin:0 0 10px 0; color:#dbe5ff; font-size:28px; letter-spacing:.4px}
-  .menu .muted{color:#acb6cf; font-size:14px}
-  .menu .items{margin-top:16px; display:flex; gap:12px; flex-wrap:wrap}
-  .menu .btn.big{font-size:16px; font-weight:800; padding:14px 18px}
-  .menuHero{margin-top:12px; height:180px; border-radius:14px; border:1px solid #2a3556; background:
-    radial-gradient(600px 180px at 20% 30%, #8fb1ff22, transparent),
-    radial-gradient(600px 180px at 80% 60%, #ffd36b22, transparent),
-    linear-gradient(180deg,#111a2c,#0c1322);
-    display:flex; align-items:center; justify-content:center; color:#dfe7ff; font-weight:900; font-size:36px; letter-spacing:3px;
-  }
+  .menu .cardmenu{background:linear-gradient(180deg,#0f1728,#0b1220); border:1px solid #2d3754; border-radius:20px; padding:22px; width:min(520px,92vw); box-shadow:0 28px 56px rgba(0,0,0,.55); display:flex; flex-direction:column; align-items:center}
+  .menu .muted{color:#acb6cf; font-size:14px; margin-bottom:12px}
+  .menu .items{display:flex; flex-direction:column; align-items:center; gap:12px; width:100%}
+  .menu .btn.big{font-size:16px; font-weight:800; padding:14px 18px; width:80%; max-width:360px}
 
   /* Dice overlay */
-  .diceOverlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:70; background:rgba(5,8,12,.6)}
+  .diceOverlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:85; background:rgba(5,8,12,.6)}
   .diceArea{display:flex; gap:40px; align-items:center}
   .die{width:72px; height:72px; position:relative; transform-style:preserve-3d; transform:rotateX(0) rotateY(0)}
   .face{position:absolute; width:100%; height:100%; background:#e8eefc; border-radius:10px; box-shadow:inset 0 0 0 2px #b5c3ea; display:flex; align-items:center; justify-content:center; font-weight:900; color:#1b2b5a; font-size:28px}
@@ -137,105 +139,100 @@
   .face:nth-child(6){transform:rotateX(-90deg) translateZ(36px)}
   .diceTxt{color:#dbe5ff; font-weight:800; text-shadow:0 1px 0 #000}
 
-  /* Toast */
-  .toast{position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#111522; border:1px solid #232a3a; padding:10px 14px; border-radius:10px; color:#e7ecff; font-size:13px; display:none; z-index:65}
+  .toast{position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); background:#111522; border:1px solid #232a3a; padding:10px 14px; border-radius:10px; color:#e7ecff; font-size:13px; display:none; z-index:95}
 
-  /* Orientation: rotate on narrow devices */
-  .orientTip{position:fixed; top:8px; right:8px; background:#0f1422aa; color:#dbe5ff; border:1px solid #273250; border-radius:10px; padding:6px 10px; font-size:12px; z-index:30; display:none}
-  .portrait .orientTip{display:block}
-  .portrait .gameArea{
-    position:absolute; top:50%; left:50%; transform: translate(-50%,-50%) rotate(90deg) scale(var(--scale,0.9));
-    transform-origin:center; width:100vh; height:100vw;
-  }
+  .orientTip{position:fixed; top:calc(8px + env(safe-area-inset-top)); right:8px; background:#0f1422aa; color:#dbe5ff; border:1px solid #273250; border-radius:10px; padding:6px 10px; font-size:12px; z-index:30; display:none}
 
-  /* Victory modal */
-  #winModal .body{padding:18px; text-align:center}
-  #winModal h3{margin:0 0 8px 0; color:#e5ecff}
-  #winModal .msg{color:#cfd8f6; margin-bottom:12px}
-  #winModal .okbar{display:flex; justify-content:center; gap:8px; margin-top:8px}
-
-  /* Scrollbars */
   ::-webkit-scrollbar{height:8px;width:8px}
   ::-webkit-scrollbar-track{background:#0b1019}
   ::-webkit-scrollbar-thumb{background:#22334a;border-radius:8px}
 
-  /* Responsive */
   @media (max-width: 820px){
-    .boardWrap{grid-template-columns:1fr; overflow:auto; padding-bottom:8px}
-    .rightCol{flex-direction:row; overflow:auto}
-    .rightCol .panel{min-width:260px}
+    .boardWrap{grid-template-columns:1fr; overflow:hidden; padding-bottom:8px}
+    .rightCol{grid-template-rows:auto auto 1fr}
   }
+
+  /* Portrait rotation: rotate the WHOLE .rotatable */
+  .portrait .rotatable{
+    position:absolute; top:50%; left:50%; transform: translate(-50%,-50%) rotate(90deg) scale(var(--scale,0.98));
+    width:100svh; width:100dvh; height:100svh; height:100dvh;
+  }
+  .portrait .orientTip{display:block}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div class="titlebar">
-      <h1>F!RST — flat ghibli</h1>
-      <span class="pill">Turn: <b id="turnLbl">—</b></span>
-      <span class="pill">Dice: <b id="diceLbl">—</b></span>
-      <span class="pill">Your hand: <b id="youHandCount">0</b>/7</span>
-      <span class="pill">AI hand: <b id="aiHandCount">0</b> (hidden)</span>
-    </div>
-    <div class="bar">
-      <button class="btn menuBtn" id="toMenuBtn">Menu</button>
-      <button class="btn icon-btn help" id="helpBtn">?</button>
-      <button class="btn" id="restartBtn">New Game</button>
-    </div>
-  </header>
-
-  <div id="orientTip" class="orientTip">Rotated for better fit</div>
-
-  <div id="gameArea" class="gameArea" style="position:relative; width:100%; height:calc(100% - 64px);">
-    <div class="boardWrap">
-      <div class="leftCol">
-        <!-- AI Board (top) -->
-        <div id="panelAiSpace" class="panel">
-          <div class="title">SPACE — AI</div>
-          <div class="boardFlat">
-            <div id="aiSpace" class="zone"></div>
-          </div>
-        </div>
-        <!-- Player Board (middle) -->
-        <div id="panelYouSpace" class="panel">
-          <div class="title">SPACE — You</div>
-          <div class="boardFlat">
-            <div id="youSpace" class="zone"></div>
-          </div>
-        </div>
-        <!-- Hand -->
-        <div class="panel handPanel">
-          <div class="title">Your hand <span class="note">(tap a card to play; turn ends automatically)</span></div>
-          <div id="youHand" class="handRow"></div>
-        </div>
+  <div id="rot" class="rotatable">
+    <header>
+      <div class="titlebar">
+        <h1>F!RST — flat ghibli</h1>
+        <span class="pill">Turn: <b id="turnLbl">—</b></span>
+        <span class="pill">Dice: <b id="diceLbl">—</b></span>
+        <span class="pill">Your hand: <b id="youHandCount">0</b>/7</span>
+        <span class="pill">AI hand: <b id="aiHandCount">0</b> (hidden)</span>
+        <span class="pill" id="forbidYouPill" style="display:none"></span>
+        <span class="pill" id="forbidAIPill" style="display:none"></span>
       </div>
-      <div class="rightCol">
-        <!-- Discard AI -->
-        <div class="panel">
-          <div class="title">DISCARD — AI</div>
-          <div id="aiDiscard" class="stackPiles"></div>
+      <div class="bar">
+        <button class="btn" id="fullBtn">Fullscreen</button>
+        <button class="btn" id="toMenuBtn">Menu</button>
+        <button class="btn icon-btn" id="helpBtn">?</button>
+        <button class="btn" id="restartBtn">New Game</button>
+      </div>
+    </header>
+
+    <div id="gameArea" class="gameArea" style="position:relative; width:100%; height:calc(100% - 64px);">
+      <div class="boardWrap">
+        <div class="leftCol">
+          <!-- AI Board (top) -->
+          <div id="panelAiSpace" class="panel">
+            <div class="title">SPACE — AI <span id="aiForbidChip" class="chip" style="display:none">Forbid active</span></div>
+            <div class="boardFlat">
+              <div class="forbidStripe" id="aiForbidStripe" style="display:none"></div>
+              <div id="aiBadge" class="forbidBadge" style="display:none">?</div>
+              <div id="aiSpace" class="zone"></div>
+            </div>
+          </div>
+          <!-- Player Board (middle) -->
+          <div id="panelYouSpace" class="panel">
+            <div class="title">SPACE — You <span id="youForbidChip" class="chip" style="display:none">Forbid active</span></div>
+            <div class="boardFlat">
+              <div class="forbidStripe" id="youForbidStripe" style="display:none"></div>
+              <div id="youBadge" class="forbidBadge" style="display:none">?</div>
+              <div id="youSpace" class="zone"></div>
+            </div>
+          </div>
+          <!-- Hand -->
+          <div class="panel handPanel">
+            <div class="title">Your hand <span class="note">(tap a card to play; turn ends automatically)</span></div>
+            <div id="youHand" class="handRow"></div>
+          </div>
         </div>
-        <!-- Discard YOU -->
-        <div class="panel">
-          <div class="title">DISCARD — You</div>
-          <div id="youDiscard" class="stackPiles"></div>
-        </div>
-        <!-- Log -->
-        <div class="panel logPanel">
-          <div class="title">Game log</div>
-          <div id="log" class="log"></div>
+        <div class="rightCol">
+          <div class="panel">
+            <div class="title">DISCARD — AI</div>
+            <div id="aiDiscard" class="stackPiles"></div>
+          </div>
+          <div class="panel">
+            <div class="title">DISCARD — You</div>
+            <div id="youDiscard" class="stackPiles"></div>
+          </div>
+          <div class="panel logPanel">
+            <div class="title">Game log</div>
+            <div id="log" class="log"></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
+<div id="orientTip" class="orientTip">Rotated for better fit</div>
+
 <!-- Menu overlay -->
 <div id="menu" class="menu" style="display:flex">
   <div class="cardmenu">
-    <h2>F!RST</h2>
-    <div class="muted">Flat ghibli prototype — local build</div>
-    <div class="menuHero">F ! R S T</div>
+    <div class="muted">Welcome to F!RST</div>
     <div class="items">
       <button class="btn big" id="menuNewGame">New Game</button>
       <button class="btn big" id="menuRules">Rules</button>
@@ -298,7 +295,7 @@
     <div class="body">
       <h3 id="winTitle">Victory!</h3>
       <div id="winMsg" class="msg">You completed a combo.</div>
-      <div class="okbar">
+      <div class="okbar" style="display:flex; justify-content:center; gap:8px; margin-top:8px">
         <button class="btn" id="winNew">New Game</button>
         <button class="btn" id="winMenu">Menu</button>
       </div>
@@ -309,72 +306,99 @@
 <div id="toast" class="toast"></div>
 
 <script>
-/* =========================
-   State & constants
-   ========================= */
-const TYPES = ['F','I','R','S','T'];
+const TYPES=['F','I','R','S','T'];
+let G=null;
 
-let G = null;
-
-function sideState(){
-  return { deck: buildDeck(), hand: [], space: [], discard: [] };
-}
-function buildDeck(){
-  const d=[]; for(let i=0;i<10;i++) for(const t of TYPES) d.push(t); return d;
-}
+function sideState(){ return { deck: buildDeck(), hand: [], space: [], discard: [] }; }
+function buildDeck(){ const d=[]; for(let i=0;i<10;i++) for(const t of TYPES) d.push(t); return d; }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 
 function newGame(){
-  G = {
-    turn:null, firstPlayer:null, firstTurnDone:false,
-    you:sideState(), ai:sideState(),
-    traps:{ forbidYou:null, forbidAI:null, tNextYou:0, tNextAI:0 },
-    over:false, log:[]
-  };
-  document.getElementById('panelYouSpace').classList.remove('winGlow','loseGlow','activeTurn');
-  document.getElementById('panelAiSpace').classList.remove('winGlow','loseGlow','activeTurn');
+  G={ turn:null, firstPlayer:null, firstTurnDone:false,
+      you:sideState(), ai:sideState(),
+      traps:{ forbidYou:null, forbidAI:null, tNextYou:0, tNextAI:0 },
+      over:false, log:[] };
+  clearHighlights();
   shuffle(G.you.deck); shuffle(G.ai.deck);
   draw('you',5); draw('ai',5);
   openDiceAndDecideFirstPlayer();
+  renderEffects();
+}
+
+function clearHighlights(){
+  ['panelYouSpace','panelAiSpace'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.remove('winGlow','loseGlow','activeTurn','forbidActive','forbidTriggered');
+  });
+  document.getElementById('aiForbidStripe').style.display='none';
+  document.getElementById('youForbidStripe').style.display='none';
+  document.getElementById('aiBadge').style.display='none';
+  document.getElementById('youBadge').style.display='none';
 }
 
 function setHUD(){
-  document.getElementById('youHandCount').textContent = G.you.hand.length;
-  document.getElementById('aiHandCount').textContent = G.ai.hand.length;
-  document.getElementById('turnLbl').textContent = G.over ? 'Game over' : (G.turn==='you'?'You':'AI');
-  const youPanel = document.getElementById('panelYouSpace');
-  const aiPanel  = document.getElementById('panelAiSpace');
+  document.getElementById('youHandCount').textContent=G.you.hand.length;
+  document.getElementById('aiHandCount').textContent=G.ai.hand.length;
+  document.getElementById('turnLbl').textContent= G.over?'Game over':(G.turn==='you'?'You':'AI');
+  const youPanel=document.getElementById('panelYouSpace');
+  const aiPanel =document.getElementById('panelAiSpace');
   youPanel.classList.toggle('activeTurn', G.turn==='you' && !G.over);
   aiPanel.classList.toggle('activeTurn',  G.turn==='ai'  && !G.over);
+  renderEffects();
 }
 
-/* =========================
-   Orientation handling
-   ========================= */
+function renderEffects(){
+  // Header pills for forbids
+  const y=G.traps.forbidAI, a=G.traps.forbidYou;
+  const yP=document.getElementById('forbidAIPill');
+  const aP=document.getElementById('forbidYouPill');
+  if(y){ yP.style.display='inline-block'; yP.textContent='Your forbid: '+y; } else yP.style.display='none';
+  if(a){ aP.style.display='inline-block'; aP.textContent="AI forbid: "+a; } else aP.style.display='none';
+
+  // Board chips & stripes & badge letters
+  const youChip=document.getElementById('youForbidChip');
+  const aiChip =document.getElementById('aiForbidChip');
+  const youStripe=document.getElementById('youForbidStripe');
+  const aiStripe =document.getElementById('aiForbidStripe');
+  const youBadge=document.getElementById('youBadge');
+  const aiBadge =document.getElementById('aiBadge');
+  const youPanel=document.getElementById('panelYouSpace');
+  const aiPanel =document.getElementById('panelAiSpace');
+
+  if(y){
+    youChip.style.display='inline-block'; youStripe.style.display='block'; youBadge.style.display='block'; youBadge.textContent=y;
+    youPanel.classList.add('forbidActive');
+  }else{
+    youChip.style.display='none'; youStripe.style.display='none'; youBadge.style.display='none'; youPanel.classList.remove('forbidActive');
+  }
+  if(a){
+    aiChip.style.display='inline-block'; aiStripe.style.display='block'; aiBadge.style.display='block'; aiBadge.textContent=a;
+    aiPanel.classList.add('forbidActive');
+  }else{
+    aiChip.style.display='none'; aiStripe.style.display='none'; aiBadge.style.display='none'; aiPanel.classList.remove('forbidActive');
+  }
+}
+
 function updateOrientation(){
-  const portrait = window.innerHeight > window.innerWidth;
-  const gameArea = document.getElementById('gameArea');
+  const portrait=window.innerHeight>window.innerWidth;
+  const rot=document.getElementById('rot');
   if(portrait){
     document.body.classList.add('portrait');
-    const w = window.innerWidth, h = window.innerHeight;
-    const scale = Math.min(h / w, 1);
-    gameArea.style.setProperty('--scale', Math.max(0.85, scale).toString());
-    document.getElementById('orientTip').style.display = 'block';
+    const w=window.innerWidth, h=window.innerHeight;
+    const scale=Math.min(h/w, 1);
+    rot.style.setProperty('--scale', Math.max(0.9, scale).toString());
+    document.getElementById('orientTip').style.display='block';
   }else{
     document.body.classList.remove('portrait');
-    gameArea.style.removeProperty('--scale');
-    document.getElementById('orientTip').style.display = 'none';
+    document.getElementById('orientTip').style.display='none';
   }
 }
 window.addEventListener('resize', updateOrientation);
 
-/* =========================
-   UI helpers
-   ========================= */
 function cardEl(letter, opts={}){
-  const d = document.createElement('div');
-  d.className = 'card' + (opts.clickable?' clickable':'');
-  const span = document.createElement('div'); span.className = 'L ' + letter; span.textContent = letter;
+  const d=document.createElement('div');
+  d.className='card'+(opts.clickable?' clickable':'');
+  const span=document.createElement('div'); span.className='L '+letter; span.textContent=letter;
   d.appendChild(span);
   if(opts.clickable && opts.onClick) d.addEventListener('click', opts.onClick);
   return d;
@@ -383,211 +407,152 @@ function zoneEl(id){ return document.getElementById(id); }
 
 function render(){
   setHUD();
-  // SPACE AI / YOU
-  const aiS = zoneEl('aiSpace'); aiS.innerHTML='';
-  G.ai.space.forEach((c,i)=> aiS.appendChild(cardEl(c)));
-  const youS = zoneEl('youSpace'); youS.innerHTML='';
-  G.you.space.forEach((c,i)=> youS.appendChild(cardEl(c)));
-
-  // HAND
-  const hand = zoneEl('youHand'); hand.innerHTML='';
-  G.you.hand.forEach((c,i)=> hand.appendChild(cardEl(c,{clickable: G.turn==='you' && !G.over, onClick:()=> playFromHand(i)})));
-
-  // DISCARD piles compact (with safe overlap)
+  const aiS=zoneEl('aiSpace'); aiS.innerHTML='';
+  G.ai.space.forEach(c=> aiS.appendChild(cardEl(c)));
+  const youS=zoneEl('youSpace'); youS.innerHTML='';
+  G.you.space.forEach(c=> youS.appendChild(cardEl(c)));
+  const hand=zoneEl('youHand'); hand.innerHTML='';
+  G.you.hand.forEach((c,i)=> hand.appendChild(cardEl(c,{clickable:G.turn==='you' && !G.over, onClick:()=>playFromHand(i)})));
   renderDiscard('aiDiscard', G.ai.discard);
   renderDiscard('youDiscard', G.you.discard);
 }
 
 function renderDiscard(containerId, discardArr){
-  const box = document.getElementById(containerId); box.innerHTML='';
-  const counts = {F:0,I:0,R:0,S:0,T:0};
-  discardArr.forEach(x=> counts[x]++);
-  const pile = document.createElement('div'); pile.className='pile';
-  TYPES.forEach((t)=>{
-    if(counts[t]===0) return;
-    const m = document.createElement('div'); m.className='mini';
-    const b = document.createElement('b'); b.textContent = t; b.style.color = letterColor(t);
-    m.appendChild(b);
-    pile.appendChild(m);
-  });
-  const cnt = document.createElement('div'); cnt.className='count'; cnt.textContent = discardArr.length;
-  pile.appendChild(cnt);
-  box.appendChild(pile);
+  const box=document.getElementById(containerId); box.innerHTML='';
+  const counts={F:0,I:0,R:0,S:0,T:0}; discardArr.forEach(x=>counts[x]++);
+  const pile=document.createElement('div'); pile.className='pile';
+  TYPES.forEach(t=>{ if(counts[t]===0) return; const m=document.createElement('div'); m.className='mini'; const b=document.createElement('b'); b.textContent=t; b.style.color=letterColor(t); m.appendChild(b); pile.appendChild(m); });
+  const cnt=document.createElement('div'); cnt.className='count'; cnt.textContent=discardArr.length;
+  pile.appendChild(cnt); box.appendChild(pile);
 }
-function letterColor(l){
-  return l==='F' ? '#9cc8ff' : l==='I' ? '#a9ffcf' : l==='R' ? '#ffd195' : l==='S' ? '#ff9aa4' : '#c6b3ff';
-}
+function letterColor(l){ return l==='F'?'#9cc8ff':l==='I'?'#a9ffcf':l==='R'?'#ffd195':l==='S'?'#ff9aa4':'#c6b3ff'; }
 
-/* =========================
-   Logging
-   ========================= */
 function logAdd(s){
   G.log.push(s);
-  const el = document.getElementById('log');
-  const div = document.createElement('div');
-  div.textContent = s;
-  div.className = 'entry';
-  el.appendChild(div);
-  el.scrollTop = el.scrollHeight;
+  const el=document.getElementById('log');
+  const div=document.createElement('div');
+  div.textContent=s; div.className='entry';
+  el.appendChild(div); el.scrollTop=el.scrollHeight;
 }
 
-/* =========================
-   Draw & limits
-   ========================= */
-function draw(side, n){
-  const S = (side==='you')?G.you:G.ai;
+function draw(side,n){
+  const S=(side==='you')?G.you:G.ai;
   for(let i=0;i<n;i++){
-    if(S.deck.length===0){
-      defeat(side); return;
-    }
-    const c = S.deck.pop();
-    S.hand.push(c);
-    logAdd((side==='you'?'You':'AI') + ' drew a card.');
+    if(S.deck.length===0){ defeat(side); return; }
+    const c=S.deck.pop(); S.hand.push(c);
+    logAdd((side==='you'?'You':'AI')+' drew a card.');
     enforceHandLimit(side);
     if(G.over) return;
   }
 }
-
 function enforceHandLimit(side){
-  const S = side==='you'?G.you:G.ai;
+  const S=side==='you'?G.you:G.ai;
   while(S.hand.length>7){
-    const overflow = S.hand.pop();
+    const overflow=S.hand.pop();
     S.discard.push(overflow);
-    logAdd((side==='you'?'Your':'AI\'s') + ' hand overflow: ' + overflow + ' → DISCARD.');
+    logAdd((side==='you'?'Your':"AI's")+' hand overflow: '+overflow+' → DISCARD.');
   }
   render();
 }
 
-/* =========================
-   Turn flow
-   ========================= */
 function startTurn(){
   if(G.over) return;
   setHUD();
-  const side = G.turn;
-  // DRAW STEP
-  const skip = (!G.firstTurnDone && G.turn===G.firstPlayer);
-  if(!skip){
-    draw(side,1);
-    if(G.over) return;
-  }
-  if(!G.firstTurnDone) G.firstTurnDone = true;
+  const side=G.turn;
+  const skip=(!G.firstTurnDone && G.turn===G.firstPlayer);
+  if(!skip){ draw(side,1); if(G.over) return; }
+  if(!G.firstTurnDone) G.firstTurnDone=true;
 
-  // T traps
   if(side==='you' && G.traps.tNextYou>0){
     if(G.you.hand.length>0){
       chooseIndex('Trap (T): choose a card to discard', G.you.hand, (idx)=>{
-        const dumped = G.you.hand.splice(idx,1)[0];
+        const dumped=G.you.hand.splice(idx,1)[0];
         G.you.discard.push(dumped);
         animateFromSpaceOrHand('you','hand',idx, document.getElementById('youDiscard'));
-        logAdd('Trap: you discarded ' + dumped + '.');
-        render();
-        G.traps.tNextYou = 0;
+        logAdd('Trap: you discarded '+dumped+'.');
+        render(); G.traps.tNextYou=0;
       });
       return;
-    }else{
-      G.traps.tNextYou = 0;
-    }
+    }else G.traps.tNextYou=0;
   }
   if(side==='ai' && G.traps.tNextAI>0){
     if(G.ai.hand.length>0){
-      const dumpedIdx = Math.floor(Math.random()*G.ai.hand.length);
-      const dumped = G.ai.hand.splice(dumpedIdx,1)[0];
+      const dumpedIdx=Math.floor(Math.random()*G.ai.hand.length);
+      const dumped=G.ai.hand.splice(dumpedIdx,1)[0];
       G.ai.discard.push(dumped);
       animateFromSpaceOrHand('ai','hand',dumpedIdx, document.getElementById('aiDiscard'));
-      logAdd('Trap: AI discarded a card.');
-      render();
+      logAdd('Trap: AI discarded a card.'); render();
     }
-    G.traps.tNextAI = 0;
+    G.traps.tNextAI=0;
   }
 
   render();
-  // AI autoplay with thinking delay
-  if(side==='ai'){
-    setTimeout(aiPlay, 800 + Math.random()*500);
-  }
+  if(side==='ai'){ setTimeout(aiPlay, 800+Math.random()*600); }
 }
 
-function endTurn(){
-  if(G.over) return;
-  G.turn = (G.turn==='you') ? 'ai' : 'you';
-  render();
-  setTimeout(startTurn, 380);
-}
+function endTurn(){ if(G.over) return; G.turn=(G.turn==='you')?'ai':'you'; render(); setTimeout(startTurn,380); }
 
 function defeat(side){
-  if(G.over) return;
-  G.over = true;
-  showWin(side==='you' ? 'AI' : 'You', side==='you' ? 'Your deck was empty on a required draw.' : 'AI had no cards to draw.');
+  if(G.over) return; G.over=true;
+  showWin(side==='you'?'AI':'You', side==='you'?'Your deck was empty on a required draw.':'AI had no cards to draw.');
 }
 
-/* =========================
-   Effects & play
-   ========================= */
 function playFromHand(index){
   if(G.over || G.turn!=='you') return;
-  const letter = G.you.hand[index];
-  if(!letter) return;
-  // Forbid against you
-  if(G.traps.forbidYou === letter){
-    G.traps.forbidYou = null;
-    const src = pickHandCardEl(index);
-    G.you.discard.push(letter);
-    G.you.hand.splice(index,1);
+  const letter=G.you.hand[index]; if(!letter) return;
+  if(G.traps.forbidYou===letter){
+    G.traps.forbidYou=null;
+    const src=pickHandCardEl(index);
+    G.you.discard.push(letter); G.you.hand.splice(index,1);
     animateFly(src, document.getElementById('youDiscard'));
-    logAdd('Forbid triggered: your ' + letter + ' went to DISCARD.');
-    render();
-    if(!checkWin()) endTurn();
-    return;
+    // Trigger effect flash on your board (you were forbidden)
+    triggerForbidFlash('you');
+    logAdd('Forbid triggered: your '+letter+' went to DISCARD.');
+    render(); renderEffects();
+    if(!checkWin()) endTurn(); return;
   }
-  // Normal play
-  const src = pickHandCardEl(index);
-  G.you.hand.splice(index,1);
-  G.you.space.push(letter);
+  const src=pickHandCardEl(index);
+  G.you.hand.splice(index,1); G.you.space.push(letter);
   animateFly(src, document.getElementById('youSpace'));
-  logAdd('You played ' + letter + '.');
-  render();
+  logAdd('You played '+letter+'.'); render();
   resolveEffect('you', letter, ()=>{ if(!checkWin()) endTurn(); });
 }
 
 function resolveEffect(side, letter, done){
   if(letter==='F'){
     chooseType('Choose a letter to forbid', TYPES, (t)=>{
-      if(side==='you'){ G.traps.forbidAI = t; logAdd('You forbade ' + t + ' for AI.'); }
-      else { G.traps.forbidYou = t; logAdd('AI forbade ' + t + ' for you.'); }
-      done();
+      if(side==='you'){ G.traps.forbidAI=t; logAdd('You forbade '+t+' for AI.'); }
+      else { G.traps.forbidYou=t; logAdd('AI forbade '+t+' for you.'); }
+      renderEffects(); done();
     });
     return;
   }
   if(letter==='I'){ draw(side,1); done(); return; }
   if(letter==='R'){
-    const S = side==='you'?G.you:G.ai;
+    const S=side==='you'?G.you:G.ai;
     if(S.discard.length===0){ done(); return; }
     chooseType('Recover: choose a letter from your DISCARD', uniqueLetters(S.discard), (pick)=>{
-      const idx = S.discard.lastIndexOf(pick);
+      const idx=S.discard.lastIndexOf(pick);
       if(idx>=0){
-        const c = S.discard.splice(idx,1)[0];
+        const c=S.discard.splice(idx,1)[0];
         S.hand.push(c);
-        if(side==='you') animateFromDiscardTo('you', 'hand', pick);
-        else animateFromDiscardTo('ai', 'space', pick); // visualize to AI space
-        logAdd((side==='you'?'You':'AI') + ' recovered ' + c + (side==='you'?' to hand.':' (hidden hand).'));
+        if(side==='you') animateFromDiscardTo('you','hand', pick);
+        else animateFromDiscardTo('ai','space', pick);
+        logAdd((side==='you'?'You':'AI')+' recovered '+c+(side==='you'?' to hand.':' (hidden hand).'));
         enforceHandLimit(side);
       }
-      render();
-      done();
+      render(); done();
     });
     return;
   }
   if(letter==='S'){
-    const O = side==='you'?G.ai:G.you;
+    const O=side==='you'?G.ai:G.you;
     if(O.space.length===0){ done(); return; }
     chooseIndex('Steal: choose a card from opponent SPACE', O.space, (i)=>{
       animateFromSpaceOrHand(side==='you'?'ai':'you','space',i, side==='you'?document.getElementById('aiDiscard'):document.getElementById('youDiscard'));
-      const removed = O.space.splice(i,1)[0];
-      O.discard.push(removed);
-      logAdd((side==='you'?'You':'AI') + ' moved opponent ' + removed + ' to DISCARD.');
-      render();
-      done();
+      const removed=O.space.splice(i,1)[0]; O.discard.push(removed);
+      logAdd((side==='you'?'You':'AI')+' moved opponent '+removed+' to DISCARD.');
+      render(); done();
     });
     return;
   }
@@ -601,65 +566,50 @@ function resolveEffect(side, letter, done){
 
 function uniqueLetters(arr){ return Array.from(new Set(arr)); }
 
-/* =========================
-   AI
-   ========================= */
 function aiPlay(){
   if(G.over || G.turn!=='ai') return;
-  const hand = G.ai.hand.slice();
-  if(hand.length===0){ endTurn(); return; }
-  let idx = -1;
-  if(G.you.space.length>0 && hand.includes('S')) idx = hand.indexOf('S');
-  if(idx<0 && G.ai.discard.length>0 && hand.includes('R')) idx = hand.indexOf('R');
-  if(idx<0 && hand.includes('F')) idx = hand.indexOf('F');
-  if(idx<0 && hand.includes('T')) idx = hand.indexOf('T');
-  if(idx<0 && hand.includes('I')) idx = hand.indexOf('I');
-  if(idx<0) idx = 0;
-  const letter = hand[idx];
-  // Forbid against AI
-  if(G.traps.forbidAI === letter){
-    G.traps.forbidAI = null;
-    const src = pickAiHandCardEl(idx);
-    G.ai.discard.push(letter);
-    G.ai.hand.splice(idx,1);
+  const hand=G.ai.hand.slice(); if(hand.length===0){ endTurn(); return; }
+  let idx=-1;
+  if(G.you.space.length>0 && hand.includes('S')) idx=hand.indexOf('S');
+  if(idx<0 && G.ai.discard.length>0 && hand.includes('R')) idx=hand.indexOf('R');
+  if(idx<0 && hand.includes('F')) idx=hand.indexOf('F');
+  if(idx<0 && hand.includes('T')) idx=hand.indexOf('T');
+  if(idx<0 && hand.includes('I')) idx=hand.indexOf('I');
+  if(idx<0) idx=0;
+  const letter=hand[idx];
+  if(G.traps.forbidAI===letter){
+    G.traps.forbidAI=null;
+    const src=pickAiHandCardEl(idx);
+    G.ai.discard.push(letter); G.ai.hand.splice(idx,1);
     animateFly(src, document.getElementById('aiDiscard'));
-    logAdd('Forbid: AI\'s ' + letter + ' went to DISCARD.');
-    render();
-    if(!checkWin()) endTurn();
-    return;
+    triggerForbidFlash('ai');
+    logAdd("Forbid: AI's "+letter+' went to DISCARD.');
+    render(); renderEffects();
+    if(!checkWin()) endTurn(); return;
   }
-  // Play
-  const src = pickAiHandCardEl(idx);
-  G.ai.hand.splice(idx,1);
-  G.ai.space.push(letter);
+  const src=pickAiHandCardEl(idx);
+  G.ai.hand.splice(idx,1); G.ai.space.push(letter);
   animateFly(src, document.getElementById('aiSpace'));
-  logAdd('AI played ' + letter + '.');
-  render();
-  // Resolve
+  logAdd('AI played '+letter+'.'); render();
   if(letter==='F'){
-    const t = pickMostType(G.you.space) || TYPES[Math.floor(Math.random()*5)];
-    G.traps.forbidYou = t; logAdd('AI forbade ' + t + ' for you.');
-    finalize(); return;
+    const t=pickMostType(G.you.space) || TYPES[Math.floor(Math.random()*5)];
+    G.traps.forbidYou=t; logAdd('AI forbade '+t+' for you.'); renderEffects(); finalize(); return;
   }
   if(letter==='I'){ draw('ai',1); finalize(); return; }
   if(letter==='R'){
     if(G.ai.discard.length>0){
-      const c = G.ai.discard.pop();
-      G.ai.hand.push(c);
+      const c=G.ai.discard.pop(); G.ai.hand.push(c);
       animateFromDiscardTo('ai','space', c);
-      logAdd('AI recovered a card to hand.');
-      enforceHandLimit('ai');
+      logAdd('AI recovered a card to hand.'); enforceHandLimit('ai');
     }
     finalize(); return;
   }
   if(letter==='S'){
     if(G.you.space.length>0){
-      const i = G.you.space.length-1;
+      const i=G.you.space.length-1;
       animateFromSpaceOrHand('you','space',i, document.getElementById('youDiscard'));
-      const removed = G.you.space.pop();
-      G.you.discard.push(removed);
-      logAdd('AI stole your ' + removed + ' to your DISCARD.');
-      render();
+      const removed=G.you.space.pop(); G.you.discard.push(removed);
+      logAdd('AI stole your '+removed+' to your DISCARD.'); render();
     }
     finalize(); return;
   }
@@ -668,224 +618,131 @@ function aiPlay(){
   function finalize(){ if(!checkWin()) endTurn(); }
 }
 
-function pickMostType(arr){
-  const m={}; for(const x of arr){m[x]=(m[x]||0)+1;} let b=null,v=-1;
-  for(const [k,c] of Object.entries(m)){ if(c>v){b=k; v=c;} } return b;
+function triggerForbidFlash(side){
+  const panel = side==='you' ? document.getElementById('panelYouSpace') : document.getElementById('panelAiSpace');
+  panel.classList.remove('forbidActive');
+  panel.classList.add('forbidTriggered');
+  const stripe = side==='you'?document.getElementById('youForbidStripe'):document.getElementById('aiForbidStripe');
+  const badge  = side==='you'?document.getElementById('youBadge'):document.getElementById('aiBadge');
+  stripe.style.display='none'; badge.style.display='none';
+  const flat=panel.querySelector('.boardFlat'); const flash=document.createElement('div'); flash.className='triggerFlash'; flat.appendChild(flash);
+  setTimeout(()=>{ if(flash.parentNode) flash.parentNode.removeChild(flash); panel.classList.remove('forbidTriggered'); }, 800);
 }
 
-/* =========================
-   Dice animation & first player (with fallback if GSAP missing)
-   ========================= */
+function pickMostType(arr){ const m={}; for(const x of arr){m[x]=(m[x]||0)+1;} let b=null,v=-1; for(const [k,c] of Object.entries(m)){ if(c>v){b=k; v=c;} } return b; }
+
 function openDiceAndDecideFirstPlayer(){
-  const overlay = document.getElementById('diceOverlay');
-  overlay.style.display = 'flex';
-  let you = rand1to6(), ai = rand1to6();
-  if(you===ai){ do{ you=rand1to6(); ai=rand1to6(); } while(you===ai); }
-  animateDice('dieYou', you);
-  animateDice('dieAI', ai);
+  const overlay=document.getElementById('diceOverlay'); overlay.style.display='flex';
+  let you=rand1to6(), ai=rand1to6(); if(you===ai){ do{ you=rand1to6(); ai=rand1to6(); }while(you===ai); }
+  animateDice('dieYou',you); animateDice('dieAI',ai);
   setTimeout(()=>{
-    G.firstPlayer = you>ai ? 'you' : 'ai';
+    G.firstPlayer= you>ai?'you':'ai';
     document.getElementById('diceLbl').textContent = `You: ${you} • AI: ${ai} — ${G.firstPlayer==='you'?'You go first.':'AI goes first.'}`;
-    overlay.style.display = 'none';
-    G.turn = G.firstPlayer;
-    render();
-    startTurn();
-  }, 1700);
+    overlay.style.display='none'; G.turn=G.firstPlayer; render(); startTurn();
+  },1700);
 }
-function rand1to6(){ return 1 + Math.floor(Math.random()*6); }
-function animateDice(id, value){
-  const die = document.getElementById(id);
-  const target = faceRotation(value);
-  if (window.gsap && gsap.to){
-    const tl = gsap.timeline();
-    tl.to(die, {duration:0.6, rotateX:360, rotateY:360, ease:"power2.out"})
-      .to(die, {duration:0.7, rotateX:target.x, rotateY:target.y, ease:"power3.out"});
-  } else {
-    const startX = 0, startY = 0, endX = target.x, endY = target.y;
-    const t0 = performance.now(); const dur = 700;
-    function step(now){
-      const p = Math.min(1, (now - t0)/dur);
-      const ex = startX + (endX - startX)*p;
-      const ey = startY + (endY - startY)*p;
-      die.style.transform = `rotateX(${ex}deg) rotateY(${ey}deg)`;
-      if(p<1) requestAnimationFrame(step);
-    }
-    die.style.transform = `rotateX(360deg) rotateY(360deg)`;
-    setTimeout(()=> requestAnimationFrame(step), 500);
-  }
+function rand1to6(){ return 1+Math.floor(Math.random()*6); }
+function animateDice(id,val){
+  const die=document.getElementById(id); const target=faceRotation(val);
+  if(window.gsap && gsap.to){ const tl=gsap.timeline(); tl.to(die,{duration:0.6,rotateX:360,rotateY:360,ease:"power2.out"}).to(die,{duration:0.7,rotateX:target.x,rotateY:target.y,ease:"power3.out"}); }
+  else { const t0=performance.now(),dur=700; function step(now){ const p=Math.min(1,(now-t0)/dur); const ex=target.x*p, ey=target.y*p; die.style.transform=`rotateX(${ex}deg) rotateY(${ey}deg)`; if(p<1) requestAnimationFrame(step); } requestAnimationFrame(step); }
 }
-function faceRotation(val){
-  switch(val){
-    case 1: return {x:0, y:0};
-    case 2: return {x:0, y:-90};
-    case 3: return {x:0, y:180};
-    case 4: return {x:0, y:90};
-    case 5: return {x:-90, y:0};
-    case 6: return {x:90, y:0};
-  }
-  return {x:0,y:0};
-}
+function faceRotation(v){ switch(v){ case 1:return{x:0,y:0}; case 2:return{x:0,y:-90}; case 3:return{x:0,y:180}; case 4:return{x:0,y:90}; case 5:return{x:-90,y:0}; case 6:return{x:90,y:0}; } return{x:0,y:0}; }
 
-/* =========================
-   Animations: fly/pop and source-captured moves
-   ========================= */
-function pickHandCardEl(index){
-  const hand = document.getElementById('youHand');
-  return hand.children[index];
-}
-function pickAiHandCardEl(index){
-  return null; // AI hand hidden
-}
+function pickHandCardEl(index){ const hand=document.getElementById('youHand'); return hand.children[index]; }
+function pickAiHandCardEl(index){ return null; }
+
 function makeGhostLetter(letter){
-  const g = document.createElement('div');
-  g.className='card';
-  const span = document.createElement('div'); span.className='L '+letter; span.textContent=letter;
-  g.appendChild(span);
-  g.style.position='fixed'; g.style.margin='0'; g.style.zIndex='90'; g.style.pointerEvents='none';
-  return g;
+  const g=document.createElement('div'); g.className='card';
+  const span=document.createElement('div'); span.className='L '+letter; span.textContent=letter;
+  g.appendChild(span); g.style.position='fixed'; g.style.margin='0'; g.style.zIndex='90'; g.style.pointerEvents='none'; return g;
 }
-function animateFly(fromEl, toContainer){
-  if(!fromEl || !toContainer) { animatePopTo(toContainer); return; }
-  const rectFrom = fromEl.getBoundingClientRect();
-  const rectTo = toContainer.getBoundingClientRect();
-  const targetX = rectTo.left + rectTo.width/2 - rectFrom.left - rectFrom.width/2;
-  const targetY = rectTo.top + rectTo.height/2 - rectFrom.top - rectFrom.height/2;
-  const ghost = fromEl.cloneNode(true);
+function animateFly(fromEl,toContainer){
+  if(!fromEl||!toContainer){ animatePopTo(toContainer); return; }
+  const rectFrom=fromEl.getBoundingClientRect(), rectTo=toContainer.getBoundingClientRect();
+  const targetX=rectTo.left+rectTo.width/2-rectFrom.left-rectFrom.width/2;
+  const targetY=rectTo.top+rectTo.height/2-rectFrom.top-rectFrom.height/2;
+  const ghost=fromEl.cloneNode(true);
   ghost.style.position='fixed'; ghost.style.left=rectFrom.left+'px'; ghost.style.top=rectFrom.top+'px'; ghost.style.margin='0'; ghost.style.zIndex='90'; ghost.style.pointerEvents='none';
   document.body.appendChild(ghost);
-  if (window.gsap && gsap.to){
-    gsap.to(ghost, {duration:0.55, x: targetX, y: targetY, scale:0.9, rotation:(Math.random()*10-5), ease:"power3.inOut", onComplete:()=>document.body.removeChild(ghost)});
-  } else {
-    const t0 = performance.now(); const dur = 550; const sx=0, sy=0;
-    function step(now){
-      const p = Math.min(1, (now - t0)/dur);
-      const x = sx + targetX*p, y = sy + targetY*p, s = 1 - 0.1*p;
-      ghost.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
-      if(p<1) requestAnimationFrame(step); else document.body.removeChild(ghost);
-    }
-    requestAnimationFrame(step);
-  }
+  if(window.gsap && gsap.to){ gsap.to(ghost,{duration:0.55,x:targetX,y:targetY,scale:0.9,rotation:(Math.random()*10-5),ease:"power3.inOut",onComplete:()=>document.body.removeChild(ghost)}); }
+  else { const t0=performance.now(),dur=550; function step(now){ const p=Math.min(1,(now-t0)/dur); const x=targetX*p, y=targetY*p, s=1-0.1*p; ghost.style.transform=`translate(${x}px, ${y}px) scale(${s})`; if(p<1) requestAnimationFrame(step); else document.body.removeChild(ghost);} requestAnimationFrame(step); }
 }
 function animatePopTo(container){
   if(!container) return;
-  if (window.gsap && gsap.fromTo){
-    gsap.fromTo(container, {scale:0.96}, {duration:0.22, scale:1, ease:"power2.out"});
-  } else {
-    container.style.transition='transform .22s ease-out';
-    container.style.transform='scale(0.96)';
-    setTimeout(()=>{ container.style.transform='scale(1)'; }, 10);
-  }
+  if(window.gsap && gsap.fromTo){ gsap.fromTo(container,{scale:0.96},{duration:0.22,scale:1,ease:"power2.out"}); }
+  else { container.style.transition='transform .22s ease-out'; container.style.transform='scale(0.96)'; setTimeout(()=>{container.style.transform='scale(1)';},10); }
 }
-function animateFromSpaceOrHand(side, area, index, targetContainer){
-  const zoneId = side==='you' ? (area==='space'?'youSpace':'youHand') : (area==='space'?'aiSpace':'aiHandHidden');
-  const zone = document.getElementById(zoneId);
-  if(!zone || !zone.children || index<0 || index>=zone.children.length){ animatePopTo(targetContainer); return; }
-  const fromEl = zone.children[index];
-  animateFly(fromEl, targetContainer);
+function animateFromSpaceOrHand(side,area,index,targetContainer){
+  const zoneId= side==='you' ? (area==='space'?'youSpace':'youHand') : (area==='space'?'aiSpace':'aiHandHidden');
+  const zone=document.getElementById(zoneId);
+  if(!zone||!zone.children||index<0||index>=zone.children.length){ animatePopTo(targetContainer); return; }
+  const fromEl=zone.children[index]; animateFly(fromEl, targetContainer);
 }
-function animateFromDiscardTo(side, dest, letter){
-  // dest: 'hand' (you) or 'space' (ai visual)
-  const from = document.getElementById(side==='you' ? 'youDiscard' : 'aiDiscard');
-  const to = document.getElementById(side==='you' ? 'youHand' : 'aiSpace');
-  if(!from || !to) return;
-  const rectFrom = from.getBoundingClientRect();
-  const rectTo   = to.getBoundingClientRect();
-  const ghost = makeGhostLetter(letter || 'R');
-  ghost.style.left = (rectFrom.left + rectFrom.width*0.3) + 'px';
-  ghost.style.top  = (rectFrom.top  + rectFrom.height*0.3) + 'px';
+function animateFromDiscardTo(side,dest,letter){
+  const from=document.getElementById(side==='you'?'youDiscard':'aiDiscard');
+  const to  =document.getElementById(side==='you'?'youHand':'aiSpace');
+  if(!from||!to) return;
+  const rectFrom=from.getBoundingClientRect(), rectTo=to.getBoundingClientRect();
+  const ghost=makeGhostLetter(letter||'R');
+  ghost.style.left=(rectFrom.left+rectFrom.width*0.3)+'px';
+  ghost.style.top =(rectFrom.top +rectFrom.height*0.3)+'px';
   document.body.appendChild(ghost);
-  const dx = rectTo.left + rectTo.width/2 - (rectFrom.left + rectFrom.width*0.3) - ghost.offsetWidth/2;
-  const dy = rectTo.top  + rectTo.height/2 - (rectFrom.top  + rectFrom.height*0.3) - ghost.offsetHeight/2;
-  if (window.gsap && gsap.to){
-    gsap.fromTo(ghost,{opacity:0.85, scale:0.88},{duration:0.6, x:dx, y:dy, scale:1, opacity:0.95, ease:"power3.out", onComplete:()=>document.body.removeChild(ghost)});
-  } else {
-    const t0 = performance.now(); const dur = 600;
-    function step(now){
-      const p = Math.min(1,(now-t0)/dur);
-      const x = dx*p, y = dy*p, s = 0.88 + 0.12*p; const op = 0.85 + 0.1*p;
-      ghost.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
-      ghost.style.opacity = op;
-      if(p<1) requestAnimationFrame(step); else document.body.removeChild(ghost);
-    }
-    requestAnimationFrame(step);
-  }
+  const dx=rectTo.left+rectTo.width/2-(rectFrom.left+rectFrom.width*0.3)-ghost.offsetWidth/2;
+  const dy=rectTo.top +rectTo.height/2-(rectFrom.top +rectFrom.height*0.3)-ghost.offsetHeight/2;
+  if(window.gsap && gsap.to){ gsap.fromTo(ghost,{opacity:0.85,scale:0.88},{duration:0.6,x:dx,y:dy,scale:1,opacity:0.95,ease:"power3.out",onComplete:()=>document.body.removeChild(ghost)}); }
+  else { const t0=performance.now(),dur=600; function step(now){ const p=Math.min(1,(now-t0)/dur); const x=dx*p,y=dy*p,s=0.88+0.12*p; ghost.style.transform=`translate(${x}px, ${y}px) scale(${s})`; if(p<1) requestAnimationFrame(step); else document.body.removeChild(ghost);} requestAnimationFrame(step); }
 }
 
-/* =========================
-   Choice modals
-   ========================= */
-function chooseType(title, options, cb){
-  const modal = document.getElementById('choiceModal');
-  document.getElementById('choiceTitle').textContent = title;
-  const area = document.getElementById('choiceArea'); area.innerHTML='';
-  options.forEach(o=>{
-    const b = document.createElement('button');
-    b.className='choice'; b.textContent=o;
-    b.addEventListener('click', ()=>{ modal.style.display='none'; cb(o); });
-    area.appendChild(b);
-  });
+function chooseType(title,options,cb){
+  const modal=document.getElementById('choiceModal'); document.getElementById('choiceTitle').textContent=title;
+  const area=document.getElementById('choiceArea'); area.innerHTML='';
+  options.forEach(o=>{ const b=document.createElement('button'); b.className='choice'; b.textContent=o; b.addEventListener('click',()=>{ modal.style.display='none'; cb(o);}); area.appendChild(b); });
   modal.style.display='flex';
 }
-function chooseIndex(title, list, cb){
-  const modal = document.getElementById('choiceModal');
-  document.getElementById('choiceTitle').textContent = title;
-  const area = document.getElementById('choiceArea'); area.innerHTML='';
-  list.forEach((letter, idx)=>{
-    const b = document.createElement('button');
-    b.className='choice'; b.textContent = `${idx+1}) ${letter}`;
-    b.addEventListener('click', ()=>{ modal.style.display='none'; cb(idx); });
-    area.appendChild(b);
-  });
+function chooseIndex(title,list,cb){
+  const modal=document.getElementById('choiceModal'); document.getElementById('choiceTitle').textContent=title;
+  const area=document.getElementById('choiceArea'); area.innerHTML='';
+  list.forEach((letter,idx)=>{ const b=document.createElement('button'); b.className='choice'; b.textContent=`${idx+1}) ${letter}`; b.addEventListener('click',()=>{ modal.style.display='none'; cb(idx);}); area.appendChild(b); });
   modal.style.display='flex';
 }
 
-/* =========================
-   Win check & modal
-   ========================= */
 function checkWin(){
   function hasFIRST(space){ const set=new Set(space); return TYPES.every(t=>set.has(t)); }
   function hasFiveSame(space){ const m={F:0,I:0,R:0,S:0,T:0}; space.forEach(c=>m[c]++); return Object.values(m).some(v=>v>=5); }
-  const youWin = hasFIRST(G.you.space) || hasFiveSame(G.you.space);
-  const aiWin  = hasFIRST(G.ai.space)  || hasFiveSame(G.ai.space);
+  const youWin=hasFIRST(G.you.space) || hasFiveSame(G.you.space);
+  const aiWin =hasFIRST(G.ai.space)  || hasFiveSame(G.ai.space);
   if(youWin || aiWin){
-    G.over = true;
-    const winner = youWin && !aiWin ? 'You' : (!youWin && aiWin ? 'AI' : 'Both');
+    G.over=true;
+    const winner= youWin && !aiWin ? 'You' : (!youWin && aiWin ? 'AI' : 'Both');
     const msg = youWin && !aiWin ? 'You completed a combo.' : (!youWin && aiWin ? 'AI completed a combo.' : 'Both completed a combo.');
-    const youPanel = document.getElementById('panelYouSpace');
-    const aiPanel  = document.getElementById('panelAiSpace');
-    youPanel.classList.toggle('winGlow', youWin);
-    youPanel.classList.toggle('loseGlow', !youWin && aiWin);
-    aiPanel.classList.toggle('winGlow', aiWin);
-    aiPanel.classList.toggle('loseGlow', !aiWin && youWin);
-    setTimeout(()=> showWin(winner, msg), 350);
-    return true;
+    const youPanel=document.getElementById('panelYouSpace'), aiPanel=document.getElementById('panelAiSpace');
+    youPanel.classList.toggle('winGlow', youWin); youPanel.classList.toggle('loseGlow', !youWin && aiWin);
+    aiPanel.classList.toggle('winGlow', aiWin);   aiPanel.classList.toggle('loseGlow', !aiWin && youWin);
+    setTimeout(()=> showWin(winner,msg), 350); return true;
   }
   return false;
 }
 
-function showWin(winner, msg){
-  const modal = document.getElementById('winModal');
-  document.getElementById('winTitle').textContent = winner==='Both' ? 'Draw' : (winner==='You' ? 'Victory!' : 'Defeat');
-  document.getElementById('winMsg').textContent = msg;
-  modal.style.display='flex';
+function showWin(winner,msg){
+  const modal=document.getElementById('winModal');
+  document.getElementById('winTitle').textContent= winner==='Both'?'Draw':(winner==='You'?'Victory!':'Defeat');
+  document.getElementById('winMsg').textContent=msg; modal.style.display='flex';
 }
 
-/* =========================
-   Menu & Help & Win controls
-   ========================= */
+/* Menu & Help & Fullscreen */
 document.getElementById('menuNewGame').addEventListener('click', ()=>{
-  document.getElementById('menu').style.display='none';
-  newGame();
+  document.getElementById('menu').style.display='none'; newGame();
 });
 document.getElementById('menuRules').addEventListener('click', ()=>{
+  document.getElementById('menu').style.display='none';
   document.getElementById('helpModal').style.display='flex';
 });
 document.getElementById('toMenuBtn').addEventListener('click', ()=>{
   document.getElementById('menu').style.display='flex';
 });
 document.getElementById('restartBtn').addEventListener('click', ()=>{
-  document.getElementById('log').innerHTML='';
-  newGame();
+  document.getElementById('log').innerHTML=''; newGame();
 });
 document.getElementById('helpBtn').addEventListener('click', ()=>{
   document.getElementById('helpModal').style.display='flex';
@@ -908,15 +765,15 @@ document.getElementById('winMenu').addEventListener('click', ()=>{
 });
 document.getElementById('winNew').addEventListener('click', ()=>{
   document.getElementById('winModal').style.display='none';
-  document.getElementById('log').innerHTML='';
-  newGame();
+  document.getElementById('log').innerHTML=''; newGame();
+});
+document.getElementById('fullBtn').addEventListener('click', ()=>{
+  const el=document.documentElement;
+  if(!document.fullscreenElement && el.requestFullscreen){ el.requestFullscreen(); }
+  else if(document.exitFullscreen){ document.exitFullscreen(); }
 });
 
-/* =========================
-   Start & Orientation
-   ========================= */
-updateOrientation();
-// Start at menu; game launches from menu
+updateOrientation(); // init
 </script>
 </body>
 </html>
