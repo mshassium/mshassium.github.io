@@ -46,7 +46,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .boardGrid{position:absolute;inset:48px 0 0 0;display:grid;grid-template-columns:1fr minmax(260px,320px);gap:var(--gap);overflow:hidden;padding:0 var(--gap) var(--gap) var(--gap);transform-origin:top left}
 
 .leftCol{display:grid;grid-template-rows:auto auto auto;gap:var(--gap);min-width:0;min-height:0}
-.rightCol{display:grid;grid-template-rows:auto auto minmax(120px,1fr);gap:var(--gap);min-width:0;min-height:0}
+.rightCol{display:grid;grid-template-rows:minmax(86px,auto) minmax(86px,auto) 1fr;gap:var(--gap);min-width:0;min-height:0}
 
 .panel{background:linear-gradient(180deg,#121722,#0e1420);border:1px solid var(--panel-b);border-radius:14px;padding:10px;
   box-shadow:0 10px 16px rgba(0,0,0,.22), inset 0 1px 0 #ffffff10;overflow:hidden;min-height:0}
@@ -58,8 +58,8 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 /* Space panels */
 .boardFlat{position:relative;width:100%;border-radius:14px;background:linear-gradient(180deg,#182132,#0d1422);
   border:1px solid #2d3a55;box-shadow:inset 0 0 0 2px #0b101a, 0 10px 24px rgba(0,0,0,.30);overflow:hidden;contain:layout paint size;
-  height: calc(var(--card-w)*0.72 + 22px);} /* lower */
-.zone{position:absolute;inset:8px;display:flex;gap:10px;flex-wrap:nowrap;align-items:flex-start;overflow-x:auto;overflow-y:hidden;border-radius:10px;clip-path:inset(0 round 10px)}
+  height: calc(var(--card-w)*0.64 + 18px);} /* narrower */
+.zone{position:absolute;inset:6px;display:flex;gap:10px;flex-wrap:nowrap;align-items:flex-start;overflow-x:auto;overflow-y:hidden;border-radius:10px;clip-path:inset(0 round 10px)}
 
 /* Cards */
 .card{width:var(--card-w);height:calc(var(--card-w)*0.72);border-radius:12px;border:1px solid #2f3850;
@@ -69,6 +69,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .card.clickable{cursor:pointer}
 .card.clickable:hover{box-shadow:0 10px 16px rgba(0,0,0,.4), 0 0 0 2px var(--outline) inset;transform:translateY(-2px)}
 .L{font-size:clamp(32px,5.8vw,52px);font-weight:1000;letter-spacing:2px;line-height:1;text-shadow:0 1px 0 #000}
+.card.hand .L{font-size:calc(0.8 * (clamp(32px,5.8vw,52px)));}
 .L.F{color:#9cc8ff}.L.I{color:#a9ffcf}.L.R{color:#ffd195}.L.S{color:#ff9aa4}.L.T{color:#c6b3ff}
 
 /* Forbid FX inside card (clipped) */
@@ -85,8 +86,8 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 /* Discard piles */
 .stackPiles{display:grid;gap:10px;overflow:hidden}
 .pile{position:relative;display:inline-flex;align-items:flex-end;gap:10px;flex-wrap:nowrap;padding-left:24px;max-width:100%}
-.pile .mini{width:34px;height:46px;background:linear-gradient(180deg,#1b2232,#111826);border:1px solid #2f3850;border-radius:7px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 10px rgba(0,0,0,.28);flex:0 0 auto}
-.pile .mini b{font-size:20px;line-height:1;text-shadow:0 1px 0 #000}
+.pile .mini{width:30px;height:42px;background:linear-gradient(180deg,#1b2232,#111826);border:1px solid #2f3850;border-radius:7px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 10px rgba(0,0,0,.28);flex:0 0 auto}
+.pile .mini b{font-size:18px;line-height:1;text-shadow:0 1px 0 #000}
 .pile .mini + .mini{margin-left:-14px}
 .pile .count{position:absolute;top:2px;right:2px;background:#0f1422;border:1px solid #2a3244;color:#dbe5ff;padding:2px 6px;font-size:12px;border-radius:999px;z-index:3}
 
@@ -95,7 +96,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .handRow{display:flex;gap:8px;flex-wrap:nowrap;align-items:flex-start;padding:4px;overflow-x:auto}
 
 /* Log */
-.logPanel{min-height:0;display:flex;flex-direction:column;height:240px} /* smaller so it "ужимается" */
+.logPanel{min-height:0;display:flex;flex-direction:column;height:210px} /* smaller so it 'ужимается' */
 .logHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .log{flex:1 1 auto;min-height:0;overflow:auto;background:#0e1524;border:1px solid #25314a;border-radius:10px;padding:10px;color:#c6d0ec;font-size:13px;line-height:1.35}
 .logPanel.collapsed{height:42px}
@@ -139,9 +140,9 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
   .title{font-size:12px}
   .L{font-size:clamp(16px, 4.9vw, 26px)}
   .boardGrid{inset:10px 0 0 0; gap:8px;}
-  .boardFlat{height: calc(var(--card-w)*1.06 + 18px);} /* tighter to avoid overlap */
+  .boardFlat{height: calc(var(--card-w)*0.92 + 14px);} /* tighter to avoid overlap */
   .zone{inset:8px}
-  .logPanel{height:160px}
+  .logPanel{height:140px}
   .controls .btn{display:none}
   #hamburger{display:block}
 }
@@ -152,9 +153,9 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
   .title{font-size:12px}
   .L{font-size:clamp(15px, 4.4vw, 22px)}
   .boardGrid{inset:8px 0 0 0; gap:6px;}
-  .boardFlat{height: calc(var(--card-w)*1.08 + 16px);}
+  .boardFlat{height: calc(var(--card-w)*0.96 + 12px);}
   .zone{inset:7px}
-  .logPanel{height:150px}
+  .logPanel{height:130px}
 }
 </style>
 </head>
