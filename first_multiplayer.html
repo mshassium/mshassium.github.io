@@ -200,7 +200,7 @@ function setupMPUI(){
     document.getElementById('mpHostPanel').style.display = show?'block':'none';
     document.getElementById('mpJoinPanel').style.display = show?'none':'block';
   };
-  on('menuP2P','click', ()=>{ modal.style.display='flex'; mpLog('Not connected'); showHostPanel(true); });
+  on('menuP2P','click', ()=>{ const m=document.getElementById('menu'); if(m) m.style.display='none'; modal.style.display='flex'; mpLog('Not connected'); showHostPanel(true); });
   on('mpClose','click', ()=>{ modal.style.display='none'; });
   on('mpHost','click', ()=>{ showHostPanel(true); });
   on('mpJoin','click', ()=>{ showHostPanel(false); });
@@ -252,7 +252,7 @@ function setupMPUI(){
 
 /* ===== Multiplayer-aware input routing ===== */
 const _playFromHand_local = playFromHand;
-playFromHand = function(index){
+playFromHand = function(index){ if(!window.G){ return; }
   if(MP.enabled){
     if(MP.role==='host'){
       // host is 'you' player; local play allowed only when G.turn==='you'
@@ -372,7 +372,7 @@ h1{font-size:18px;margin:0;color:var(--accent);white-space:nowrap}
 .menu .items{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
 .menu .btn.big{font-size:16px;font-weight:800;padding:14px 18px;width:80%;max-width:360px}
 
-.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;z-index:260;backdrop-filter:blur(2px)}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;z-index:360;backdrop-filter:blur(2px)}
 .modal .box{background:#10182a;border:1px solid #2a3450;border-radius:14px;max-width:720px;width:100%;box-shadow:0 10px 24px rgba(0,0,0,.5)}
 .modal .head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #253254}
 .modal .body{padding:12px;text-align:center}
@@ -698,29 +698,35 @@ function newGame(){
 }
 
 function setHUD(){
+  if(!window.G || !G.you || !G.ai){ 
+    // Minimal header update if texts exist
+    const t=document.getElementById('turnLbl'); if(t) t.textContent='—';
+    const yc=document.getElementById('youHandCount'); if(yc) yc.textContent='0';
+    const ac=document.getElementById('aiHandCount'); if(ac) ac.textContent='0';
+    const tp=document.getElementById('timerPill'); if(tp) tp.textContent='00:00';
+    return;
+  }
   document.getElementById('youHandCount').textContent=G.you.hand.length;
   document.getElementById('aiHandCount').textContent=G.ai.hand.length;
-  document.getElementById('turnLbl').textContent= G.over? tt('gameOver') : (G.turn==='you'? tt('you') : tt('ai'));
+  document.getElementById('turnLbl').textContent= G.over? tt('gameOver') : (G.turn==='you'? tt('you') : (MP.enabled? 'Friend' : tt('ai')));
   document.getElementById('timerPill').textContent = formatElapsed(elapsed);
 }
 
 function render(){
   setHUD();
   updateTurnHighlight();
-  computeAdaptiveCardWidth();
-
-
-  const aiS=document.getElementById('aiSpace'); aiS.innerHTML='';
-  G.ai.space.forEach(c=> aiS.appendChild(cardEl(c)));
-  const youS=document.getElementById('youSpace'); youS.innerHTML='';
-  G.you.space.forEach(c=> youS.appendChild(cardEl(c)));
-  const hand=document.getElementById('youHand'); hand.innerHTML='';
-  G.you.hand.forEach((c,i)=> hand.appendChild(cardEl(c,{hand:true, clickable:G.turn==='you' && !G.over, onClick:()=>playFromHand(i)})));
+  if(!window.G || !G.you || !G.ai){
+    // nothing to render yet (before newGame or MP sync)
+    computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale();
+    return;
+  }
+  const aiS=document.getElementById('aiSpace'); if(aiS) { aiS.innerHTML=''; G.ai.space.forEach(c=> aiS.appendChild(cardEl(c))); }
+  const youS=document.getElementById('youSpace'); if(youS) { youS.innerHTML=''; G.you.space.forEach(c=> youS.appendChild(cardEl(c))); }
+  const hand=document.getElementById('youHand'); if(hand){ hand.innerHTML=''; G.you.hand.forEach((c,i)=> hand.appendChild(cardEl(c,{hand:true, clickable:G.turn==='you' && !G.over, onClick:()=>playFromHand(i)}))); }
   renderDiscard('aiDiscard', G.ai.discard);
   renderDiscard('youDiscard', G.you.discard);
   updateForbidFX();
-  fitHandToSeven();
-  fitMobileScale();
+  computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale();
 }
 
 function updateForbidFX(){
@@ -784,8 +790,10 @@ function enforceHandLimit(side){
 function updateTurnHighlight(){
   const youP=document.getElementById('panelYouSpace');
   const aiP =document.getElementById('panelAiSpace');
-  youP.classList.toggle('activeTurn', G.turn==='you' && !G.over);
-  aiP.classList.toggle('activeTurn',  G.turn==='ai'  && !G.over);
+  if(!youP || !aiP) return;
+  const who = (window.G && !G.over)? G.turn : null;
+  youP.classList.toggle('activeTurn', who==='you');
+  aiP.classList.toggle('activeTurn',  who==='ai');
 }
 
 function startTurn(){
@@ -1156,7 +1164,7 @@ function setupEvents(){
 }
 // boot after DOM ready
 (function(){
-  const boot=()=>{ try{ computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale(); setupEvents(); setupMPUI(); render(); }catch(e){ console.error(e);} };
+  const boot=()=>{ try{ applyTexts(); computeAdaptiveCardWidth(); fitHandToSeven(); fitMobileScale(); setupEvents(); setupMPUI(); render(); }catch(e){ console.error(e);} };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
   else boot();
 })();
@@ -1357,7 +1365,7 @@ function setupMPUI(){
     document.getElementById('mpHostPanel').style.display = show?'block':'none';
     document.getElementById('mpJoinPanel').style.display = show?'none':'block';
   };
-  on('menuP2P','click', ()=>{ modal.style.display='flex'; mpLog('Not connected'); showHostPanel(true); });
+  on('menuP2P','click', ()=>{ const m=document.getElementById('menu'); if(m) m.style.display='none'; modal.style.display='flex'; mpLog('Not connected'); showHostPanel(true); });
   on('mpClose','click', ()=>{ modal.style.display='none'; });
   on('mpHost','click', ()=>{ showHostPanel(true); });
   on('mpJoin','click', ()=>{ showHostPanel(false); });
@@ -1409,7 +1417,7 @@ function setupMPUI(){
 
 /* ===== Multiplayer-aware input routing ===== */
 const _playFromHand_local = playFromHand;
-playFromHand = function(index){
+playFromHand = function(index){ if(!window.G){ return; }
   if(MP.enabled){
     if(MP.role==='host'){
       // host is 'you' player; local play allowed only when G.turn==='you'
